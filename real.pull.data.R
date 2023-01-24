@@ -56,7 +56,29 @@ real.pull.data <- function(
               maf = maf))
 }
 
-# Function
+# Extracting TCGA-BRCA data
 brca.data <- real.pull.data(project = "TCGA-BRCA",
                            save.filename = "BRCA.Exp.rda"
+)
+
+brca.data$expression
+brca.data$clinical
+brca.data$maf
+
+# Extracting TCGA-PRAD data
+prad.data <- real.pull.data(project = "TCGA-PRAD",
+                            save.filename = "PRAD.Exp.rda"
+)
+
+# Extracting TARGET-AML data
+aml.data <- real.pull.data(project = "TARGET-AML",
+                            save.filename = "Aml.Exp.rda"
+)
+# Extracting TARGET-ALL-P2 data
+all.data <- real.pull.data(project = "TARGET-ALL-P2",
+                           save.filename = "All.Exp.rda"
+)
+# Extracting CPTAC-3 data
+cptac3.data <- real.pull.data(project = "CPTAC-3",
+                            save.filename = "CPTAC3.Exp.rda"
 )

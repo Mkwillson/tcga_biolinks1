@@ -48,12 +48,12 @@ real.pull.data <- function(
   )
   
   GDCdownload(query.maf)
-  maf <- GDCprepare(query.maf)
+  mutational <- GDCprepare(query.maf)
   
   
   return(list(expression = expression,
               clinical = clinical,
-              maf = maf))
+              mutational = mutational))
 }
 
 # Extracting TCGA-BRCA data
@@ -74,6 +74,7 @@ prad.data <- real.pull.data(project = "TCGA-PRAD",
 aml.data <- real.pull.data(project = "TARGET-AML",
                             save.filename = "Aml.Exp.rda"
 )
+
 # Extracting TARGET-ALL-P2 data
 all.data <- real.pull.data(project = "TARGET-ALL-P2",
                            save.filename = "All.Exp.rda"

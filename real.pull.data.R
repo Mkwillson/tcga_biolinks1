@@ -60,26 +60,64 @@ real.pull.data <- function(
 brca.data <- real.pull.data(project = "TCGA-BRCA",
                            save.filename = "BRCA.Exp.rda"
 )
-
 brca.data$expression
 brca.data$clinical
-brca.data$maf
+brca.data$mutational
+
+
+names(colData(brca.data$expression))
 
 # Extracting TCGA-PRAD data
 prad.data <- real.pull.data(project = "TCGA-PRAD",
                             save.filename = "PRAD.Exp.rda"
 )
+prad.data$expression
+prad.data$clinical
+prad.data$mutational
 
-# Extracting TARGET-AML data
-aml.data <- real.pull.data(project = "TARGET-AML",
-                            save.filename = "Aml.Exp.rda"
+#Extracting TCGA-LUAD data
+luad.data <- real.pull.data(project = "TCGA-LUAD",
+                              save.filename = "LUAD.Exp.rda"
 )
+luad.data$expression
+luad.data$clinical
+luad.data$mutational
+
+# Extracting TCGA-KIRK data
+kirc.data <- real.pull.data(project = "TCGA-KIRC",
+                              save.filename = "KIRC.Exp.rda"
+)
+kirc.data$expression
+kirc.data$clinical
+kirc.data$mutational
+
+# Extracting TCGA-STAD data
+stad.data <- real.pull.data(project = "TCGA-STAD",
+                            save.filename = "STAD.Exp.rda"
+)
+stad.data$expression
+stad.data$clinical
+stad.data$mutational
 
 # Extracting TARGET-ALL-P2 data
 all.data <- real.pull.data(project = "TARGET-ALL-P2",
-                           save.filename = "All.Exp.rda"
+                            save.filename = "all.Exp.rda"
 )
-# Extracting CPTAC-3 data
-cptac3.data <- real.pull.data(project = "CPTAC-3",
-                            save.filename = "CPTAC3.Exp.rda"
+#### DOESNT WORK AS ONLY TCGA DATA CAN BE USED IN TCGA BIOLINKS ####
+
+datatable(brca.data$clinical[1:20,],
+          filter = 'top',
+          options = list(scrollX = TRUE, keys = TRUE, pageLength = 5), 
+          rownames = FALSE)
+
+# Extracting TCGA-KIRK data
+kirp.data <- real.pull.data(project = "TCGA-KIRP",
+                            save.filename = "KIRP.Exp.rda"
 )
+kirp.data$expression
+kirp.data$clinical
+kirp.data$mutational
+
+
+#################
+

@@ -1,4 +1,5 @@
 #### Downloading and preparing TARGET-AML data ####
+# Expression data
 projects <- getGDCprojects()$project_id
 as.data.frame(grep("TARGET", projects,value = TRUE))
 
@@ -27,7 +28,8 @@ query.tp.nodups <- GDCquery(project = "TARGET-AML",
                          barcode = query.tp.cases.nodups)
 aml.data <- GDCprepare(query.tp.nodups)
 aml.data
-query.tp.nodups$results
+# unable to prepare expression data
+
 
 #### Downloading and preparing TARGET-ALL-P2 data ####
 # Expression data
@@ -43,6 +45,7 @@ GDCdownload(query_Target2)
 
 ### SummarizedExperiment = TRUE
 allp2.exp.data <- GDCprepare(query_Target2)
+# Expression data has been prepared into summarized experiment
 
 # Mutational data
 query_mutationalall2 <- GDCquery(project = "TARGET-ALL-P2", 
@@ -52,3 +55,12 @@ query_mutationalall2 <- GDCquery(project = "TARGET-ALL-P2",
 
 
 GDCdownload(query_mutationalall2)
+# Unable to download as not a tar archive?
+
+# Access clinical data
+query_Clinical2 <- GDCquery(project = "TARGET-ALL-P2",
+                            data.category = "Clinical",
+                            data.type = "Clinical Supplement")
+GDCdownload(query_Clinical2)
+allp2.clin.data <- GDCprepare(query_Clinical2)
+# Problems as in xlsx files not xml

@@ -70,3 +70,4 @@ allp2.clin.data <- GDCprepare(query_Clinical2)
 # Problems as in xlsx files not xml
 
 
+

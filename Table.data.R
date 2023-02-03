@@ -118,4 +118,3 @@ dim(matched.kirp.exp.clinical)
 table(matched.kirp.exp.clinical$histological_type)
 
 #### AML #############################################
-

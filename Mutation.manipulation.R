@@ -29,11 +29,10 @@ BRCAmutations <- dplyr::select(brca.data$mutational, Hugo_Symbol, Entrez_Gene_Id
 BRCAmutations
 table(BRCAmutations$Gene)
 
-# Calculate Frequency of Gene
+# Calculate Frequency of Mutation
 
 
-help("aggregate")
-aggregate(brca.data$mutational$Hugo_Symbol, by=list(Category=x$Category), FUN=sum)
+
 ###################################
 
 # Compare 2 lists of ensemble genes

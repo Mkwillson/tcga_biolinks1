@@ -35,7 +35,11 @@ prad.data$mutational %>%
   count(Gene) -> Low.Importance
 Low.Importance
 
+##################################################################################################################
+
 # OPTION 2 - BASED ON IMPACT RATING
+prad.data$mutational %>% dplyr::count(prad.data$mutational$Variant_Classification, prad.data$mutational$IMPACT)
+
 # High impact
 prad.data$mutational %>%
   #group_by(Gene) %>%
@@ -102,6 +106,7 @@ rm_round(text.var =  prad.data$mutational$SIFT, extract = F) -> prad.data$mutati
 
 prad.data$mutational %>% 
   group_by(Gene) %>%
+  filter(Variant_Classification=="Missense_Mutation") %>%
   dplyr::count(SIFT.cat) %>%
   select(Gene,SIFT.cat) -> sift.categories
 
@@ -121,6 +126,7 @@ unlist(rm_round(text.var =  prad.data$mutational$SIFT, extract = T)) -> prad.dat
 prad.data$mutational$SIFT.num <- as.numeric(prad.data$mutational$SIFT.num)
 
 prad.data$mutational %>% 
+  filter(Variant_Classification=="Missense_Mutation") %>%
   group_by(Gene) %>%
   dplyr::count(SIFT.num) %>%
   select(Gene,SIFT.num) -> sift.number
@@ -161,6 +167,7 @@ library(qdapRegex)
 rm_round(text.var =  prad.data$mutational$PolyPhen, extract = F) -> prad.data$mutational$PolyPhen.cat
 
 prad.data$mutational %>% 
+  filter(Variant_Classification=="Missense_Mutation") %>%
   group_by(Gene) %>%
   dplyr::count(PolyPhen.cat) %>%
   select(Gene,PolyPhen.cat) -> PolyPhen.categories
@@ -183,6 +190,7 @@ prad.data$mutational$PolyPhen.num <- as.numeric(prad.data$mutational$PolyPhen.nu
 
 prad.data$mutational %>% 
   group_by(Gene) %>%
+  filter(Variant_Classification=="Missense_Mutation") %>%
   dplyr::count(PolyPhen.num) %>%
   select(Gene,PolyPhen.num) -> PolyPhen.number
 
@@ -224,13 +232,6 @@ colnames(Patients.With.Mutation)[1] <- "Gene"
 colnames(Patients.With.Mutation)[2] <- "Patients.With.Mutation"
 Patients.With.Mutation
 
-# Impact
-table(prad.data$mutational$Gene, prad.data$mutational$IMPACT)
-as.data.frame.matrix(table(prad.data$mutational$Gene, prad.data$mutational$IMPACT)) -> impact.df
-colnames(impact.df)[1]  <- "High.Impact"
-colnames(impact.df)[2]  <- "Low.Impact"
-colnames(impact.df)[3]  <- "Moderate.Impact"
-colnames(impact.df)[4]  <- "Modifier.Impact"
 
   
 # Construct function for matching different columns of data to same genes and length
@@ -301,15 +302,75 @@ PRAD.final$Percent.Low.Impact.Mutations = percent(PRAD.final$Low.Impact.Mutation
 PRAD.final$Percent.Moderate.Impact.Mutations = percent(PRAD.final$Moderate.Impact.Mutations/PRAD.final$Frequency.Gene.Is.Mutated) -> Percent.Moderate.Impact.Mutations
 PRAD.final$Percent.High.Impact.Mutations = percent(PRAD.final$High.Impact.Mutations/PRAD.final$Frequency.Gene.Is.Mutated) -> Percent.High.Impact.Mutations
 PRAD.final$Percent.Modifier.Mutations = percent(PRAD.final$Modifier.Mutations/PRAD.final$Frequency.Gene.Is.Mutated) -> Percent.Modifier.Mutations
+PRAD.final$Percent.Missense.Mutation = percent(PRAD.final$Missense.Mutation/PRAD.final$Frequency.Gene.Is.Mutated) -> Percent.Missense.Mutation
 
 # Percent of patients with that mutation
 # Find total number of patients!
-PRAD.final$Percent.Patients.With.Mutation = percent(PRAD.final$Number.Patients.With.Mutation/)
-prad.data$mutational %>% count(Gene,case_id) -> ntest
-table(test$case_id) -> ntest2
-as.data.frame(test2) -> ntest3
+prad.data$mutational %>% count(Gene,case_id) -> case.id.gene
+data.frame(case.id.gene)
+df_uniq <- unique(case.id.gene$case_id)
+length(df_uniq)
+
+# Calculate %
+PRAD.final$Percent.Patients.With.Mutation = percent(PRAD.final$Number.Patients.With.Mutation/(length(df_uniq)))
 
 
 # Reorder columns
-data = data %>% select(Time, out, In, Files)
+PRAD.final2 = PRAD.final %>% select(Gene, 
+                                   Frequency.Gene.Is.Mutated, 
+                                   Number.Patients.With.Mutation...2., 
+                                   Percent.Patients.With.Mutation, 
+                                   Modifier.Mutations...2.,
+                                   Percent.Modifier.Mutations,
+                                   Low.Impact.Mutations...2.,
+                                   Percent.Low.Impact.Mutations,
+                                   Moderate.Impact.Mutations...2., 
+                                   Percent.Moderate.Impact.Mutations,
+                                   High.Impact.Mutations...2.,
+                                   Percent.High.Impact.Mutations,
+                                   Missense.Mutation...2., 
+                                   Percent.Missense.Mutation,
+                                   SIFT.Deleterious, 
+                                   SIFT.Deleterious_low_confidence, 
+                                   SIFT.Tolerated, 
+                                   SIFT.Tolerated_low_confidence, 
+                                   SIFT.Mean...2.,
+                                   SIFT.Median...2., 
+                                   SIFT.Maximum...2., 
+                                   SIFT.StandardDeviation...2., 
+                                   PolyPhen.Benign, 
+                                   PolyPhen.Possibly.Damaging,
+                                   PolyPhen.Probably.Damaging, 
+                                   PolyPhen.Unknown,
+                                   PolyPhen.Mean...2.,
+                                   PolyPhen.Median...2.,
+                                   PolyPhen.Maximum...2.,
+                                   PolyPhen.StandardDeviation...2.)
+View(PRAD.final2)
 
+write.csv(PRAD.final2, "~/tcga_biolinks1/PRAD.final2.csv", row.names=TRUE)
+########################################################################################################################
+# Annotate with GO terms using Biomart
+library(biomaRt)
+
+annotate.HTseq.IDs <- function(HTseq.IDs){
+  ENSEMBL_DB_HOST = "uswest.ensembl.org" # Set back to default, once they are up and running again
+  ENSEMBL_VERSION = "Ensembl Genes 105"  # Try to fix https://support.bioconductor.org/p/104454/
+  
+  # mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl",
+  # host = ENSEMBL_DB_HOST,
+  #                version = ENSEMBL_VERSION)
+  mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+  ensemblID <- gsub("\\..*", '', HTseq.IDs)
+  #fetch the annotation information from the Ensembl database
+  #ensembl <- useMart('ensembl', dataset='hsapiens_gene_ensembl')
+  symbols <- getBM(attributes=c('ensembl_gene_id', 'hgnc_symbol', 'go_id'), filters='ensembl_gene_id', ensemblID, mart=mart)
+  #combine the annotation with the RNA-Seq data
+  annotatedix <- match(ensemblID,symbols$ensembl_gene_id)
+  symbols[annotatedix,] -> annotatedGenes
+  return(cbind(HTseq.IDs,annotatedGenes))
+}
+
+
+retrieved.data <- annotate.HTseq.IDs(PRAD.final2$Gene)
+retrieved.data

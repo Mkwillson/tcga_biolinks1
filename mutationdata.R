@@ -232,7 +232,39 @@ colnames(Patients.With.Mutation)[1] <- "Gene"
 colnames(Patients.With.Mutation)[2] <- "Patients.With.Mutation"
 Patients.With.Mutation
 
+# Annotate with GO terms using Biomart
+library(biomaRt)
 
+annotate.HTseq.IDs <- function(HTseq.IDs){
+  ENSEMBL_DB_HOST = "uswest.ensembl.org" # Set back to default, once they are up and running again
+  ENSEMBL_VERSION = "Ensembl Genes 105"  # Try to fix https://support.bioconductor.org/p/104454/
+  
+  # mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl",
+  # host = ENSEMBL_DB_HOST,
+  #                version = ENSEMBL_VERSION)
+  mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+  ensemblID <- gsub("\\..*", '', HTseq.IDs)
+  #fetch the annotation information from the Ensembl database
+  #ensembl <- useMart('ensembl', dataset='hsapiens_gene_ensembl')
+  symbols <- getBM(attributes=c('ensembl_gene_id', 'hgnc_symbol', 'go_id'), filters='ensembl_gene_id', ensemblID, mart=mart)
+  #combine the annotation with the RNA-Seq data
+  annotatedix <- match(ensemblID,symbols$ensembl_gene_id)
+  symbols[annotatedix,] -> annotatedGenes
+  return(cbind(HTseq.IDs,annotatedGenes))
+}
+
+retrieved.data <- annotate.HTseq.IDs(PRAD.final2$Gene)
+retrieved.data
+dim(retrieved.data)
+colnames(retrieved.data)[2] <- "Gene"
+retrieved.data %>% dplyr::select(Gene, go_id) -> GO
+Gene.Ontology <- GO                                  # Duplicate data frame
+Gene.Ontology[Gene.Ontology == ""] <- NA                     # Replace blank by NA
+Gene.Ontology
+
+class(retrieved.data)
+class(Gene.Ontology)
+class(Number.Patients.With.Mutation)
   
 # Construct function for matching different columns of data to same genes and length
 match.select <- function(x, y, label){
@@ -243,6 +275,7 @@ match.select <- function(x, y, label){
 }
 
 # Match all columns
+Gene.Ontology.Match <- match.select(x = Total.Number.Mutations, y = Gene.Ontology, label = "Gene.Ontology")
 Number.Patients.With.Mutation <- match.select(x = Total.Number.Mutations, y = Patients.With.Mutation, label = "Number.Patients.With.Mutation")
 Low.Impact.Mutations <- match.select(x = Total.Number.Mutations, y = Low.Impact.Mutations, label = "Low.Impact.Mutations")
 Moderate.Impact.Mutations <- match.select(x = Total.Number.Mutations, y = Moderate.Impact.Mutations, label = "Moderate.Impact.Mutations")
@@ -263,6 +296,7 @@ PolyPhen.StandardDeviation <- match.select(x = Total.Number.Mutations, y = PolyP
 
 # Create dataframe
 data.frame(Total.Number.Mutations,
+           Gene.Ontology[,2],
            Number.Patients.With.Mutation[,2],
            Low.Impact.Mutations[,2],
            Moderate.Impact.Mutations[,2],
@@ -317,6 +351,7 @@ PRAD.final$Percent.Patients.With.Mutation = percent(PRAD.final$Number.Patients.W
 
 # Reorder columns
 PRAD.final2 = PRAD.final %>% select(Gene, 
+                                   Gene.Ontology...2.,
                                    Frequency.Gene.Is.Mutated, 
                                    Number.Patients.With.Mutation...2., 
                                    Percent.Patients.With.Mutation, 
@@ -346,7 +381,41 @@ PRAD.final2 = PRAD.final %>% select(Gene,
                                    PolyPhen.Median...2.,
                                    PolyPhen.Maximum...2.,
                                    PolyPhen.StandardDeviation...2.)
+
+
 View(PRAD.final2)
+
+
+PRAD.final3 = PRAD.final %>% select(Gene, 
+                                    Frequency.Gene.Is.Mutated, 
+                                    Number.Patients.With.Mutation...2., 
+                                    Percent.Patients.With.Mutation, 
+                                    Modifier.Mutations...2.,
+                                    Percent.Modifier.Mutations,
+                                    Low.Impact.Mutations...2.,
+                                    Percent.Low.Impact.Mutations,
+                                    Moderate.Impact.Mutations...2., 
+                                    Percent.Moderate.Impact.Mutations,
+                                    High.Impact.Mutations...2.,
+                                    Percent.High.Impact.Mutations,
+                                    Missense.Mutation...2., 
+                                    Percent.Missense.Mutation,
+                                    SIFT.Deleterious, 
+                                    SIFT.Deleterious_low_confidence, 
+                                    SIFT.Tolerated, 
+                                    SIFT.Tolerated_low_confidence, 
+                                    SIFT.Mean...2.,
+                                    SIFT.Median...2., 
+                                    SIFT.Maximum...2., 
+                                    SIFT.StandardDeviation...2., 
+                                    PolyPhen.Benign, 
+                                    PolyPhen.Possibly.Damaging,
+                                    PolyPhen.Probably.Damaging, 
+                                    PolyPhen.Unknown,
+                                    PolyPhen.Mean...2.,
+                                    PolyPhen.Median...2.,
+                                    PolyPhen.Maximum...2.,
+                                    PolyPhen.StandardDeviation...2.)
 
 write.csv(PRAD.final2, "~/tcga_biolinks1/PRAD.final2.csv", row.names=TRUE)
 ########################################################################################################################
@@ -371,6 +440,16 @@ annotate.HTseq.IDs <- function(HTseq.IDs){
   return(cbind(HTseq.IDs,annotatedGenes))
 }
 
-
 retrieved.data <- annotate.HTseq.IDs(PRAD.final2$Gene)
 retrieved.data
+dim(retrieved.data)
+colnames(retrieved.data)[2] <- "Gene"
+retrieved.data %>% dplyr::select(Gene, go_id) -> GO
+Gene.Ontology <- GO                                  # Duplicate data frame
+Gene.Ontology[Gene.Ontology == ""] <- NA                     # Replace blank by NA
+Gene.Ontology
+
+
+listAttributes(ensembl)
+listAttributes(mart)
+

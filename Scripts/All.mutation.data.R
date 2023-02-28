@@ -2095,5 +2095,66 @@ write.csv(KIRC.final2, "~/tcga_biolinks1/KIRC.final2.csv", row.names=TRUE)
 
 ###############################################################################
 
+# Change expression ensembl gene names into correct format (no .number) to be compatible with mutation data
+mart <- useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
+listAttributes(mart)
+
+# Construct query ensembl_gene_id_version -> ensembl_gene_id
+Ensembl.Gene <- getBM(attributes=c('ensembl_gene_id', 'ensemble_gene_id_version'), filters='ensembl_gene_id', ensemblID, mart=mart)
+
+getBM(attributes = c('ensembl_gene_id', 'ensembl_gene_id_version'),
+      filters = 'ensembl_gene_id_version',
+      values = brca5.network$Regulator, 
+      mart = mart) -> Gene.Regulator
+
+# Rename columns for matching
+colnames(Gene.Regulator)[1] <- "Gene.Regulator"
+colnames(Gene.Regulator)[2] <- "Regulator"
+Gene.Regulator
+
+getBM(attributes = c('ensembl_gene_id', 'ensembl_gene_id_version'),
+      filters = 'ensembl_gene_id_version',
+      values = brca5.network$Target, 
+      mart = mart) -> Gene.Target
+
+colnames(Gene.Target)[1] <- "Gene.Target"
+colnames(Gene.Target)[2] <- "Target"
+Gene.Target
+
+# Construct function for matching different columns of data to same genes and length
+match.select <- function(x, y, label){
+  left_join(x, y, by = "Gene") -> temp.df
+  temp.df[,c(1,3)] -> temp.df
+  colnames(temp.df)[2] <- label
+  return(temp.df)
+}
+
+# Match all columns
+Gene.Regulator.Match <- match.select(x = brca5.network, y = Gene.Regulator, label = "Gene.Regulator")
 
 
+data.frame(brca5.network,
+           Gene.Target[,1],
+           Gene.Regulator[,1]
+) -> brca.df.test
+
+###############################################################################
+
+write.csv(BRCA5.network.final, "~/tcga_biolinks1/BRCA5.network.final.csv", row.names=TRUE)
+dim(brca5.network)
+dim(BRCA5.network.final)
+
+x <- "~/tcga_biolinks1/ARACNe.data/BRCA5/brca5.network.txt"
+
+
+rename.network.file <- function(x){
+temp.network <- read.delim(file = x)
+gsub("\\..*", '', temp.network$Regulator) -> temp.network$Regulator
+gsub("\\..*", '', temp.network$Target) -> temp.network$Target
+write.table(temp.network, file = gsub("network.txt", "network.rename.txt", x), sep = "\t")
+}
+
+rename.network.file(x)
+list.files(path = "~/tcga_biolinks1/ARACNe.data/", pattern = "*.network.txt", recursive = T, full.names = T) -> files.to.convert
+
+sapply(files.to.convert, rename.network.file)

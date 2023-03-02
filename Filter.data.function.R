@@ -21,15 +21,16 @@ gp.style.filter <- function (x,fold.change, delta, prop, base, prop.base, na.rm 
     return(FALSE)
   }
 }
+
 kirp.data$expression
 assay(kirp.data$expression, "tpm_unstrand") -> exp.df.tpm.kirp
-kirp.filt.exp <- exp.df.tpm.kirp[apply(exp.df.tpm.kirp,1,gp.style.filter,fold.change=3, delta=300, prop=0.05, base=20, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
-dim(kirp.filt.exp)
+kirp.filt.exp2 <- exp.df.tpm.kirp[apply(exp.df.tpm.kirp,1,gp.style.filter,fold.change=2, delta=200, prop=0.05, base=20, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
+dim(kirp.filt.exp2)
 
 # Take just the names of genes to act as TFs to test against
-data.frame(gene = rownames(kirp.filt.exp),kirp.filt.exp) -> kirp.filt.exp.first.col
-head(kirp.filt.exp.first.col[1:20,1:20])
+data.frame(gene = rownames(kirp.filt.exp2),kirp.filt.exp2) -> kirp.filt.exp2.first.col
+head(kirp.filt.exp2.first.col[1:20,1:20])
 
 # Save expression data and TF data as txt files
-write.table(kirp.filt.exp.first.col, file = "./kirp.filt.exp.txt", sep = "\t", quote = F, row.names = F)
-write.table(kirp.filt.exp.first.col[,1], file = "./kirp.filt.exp.tfs.txt", sep = "\t", quote = F, row.names = F, col.names = F)
+write.table(kirp.filt.exp2.first.col, file = "home/ug_megan/tcga_biolinks1/ARACNe.data/KIRP2/kirp.filt.exp2.txt", sep = "\t", quote = F, row.names = F)
+write.table(kirp.filt.exp2.first.col[,1], file = "home/ug_megan/tcga_biolinks1/ARACNe.data/KIRP2/kirp.filt.exp2.tfs.txt", sep = "\t", quote = F, row.names = F, col.names = F)

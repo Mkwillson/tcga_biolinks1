@@ -1,4 +1,3 @@
-
 #### ARRANGE GG PLOTS INTO FIGURE ##################################
 # Create gg plots
 #### 0.5% ######################################################################
@@ -175,9 +174,9 @@ ggplot(dat.stad.prob, aes(x=Distance, colour=Distribution)) +
   geom_density() +
   geom_vline(data=dat.stad.prob, aes(xintercept=random.cutoff.prob.stad,  colour=Distribution),
              linetype="dashed", linewidth=1) +
-  annotate("text", x = 4.0, y = 1.75, label = text.annot) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
   #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
-  annotate("text", x = 4.0, y = 1.55, label = paste0("N = ",text.annot3)) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
@@ -415,7 +414,7 @@ gg.stad.del.0.5
 ##### GGARRANGE ################################################################
 library(ggpubr)
 gg.stad0.5 + labs(subtitle = "Only Genes Missense Mutated in >= 0.5% of All Patients") -> gg.stad0.5t
-gg.stad0.5t + theme(text = element_text(size = 10)) -> p1
+gg.stad.0.5t + theme(text = element_text(size = 10)) -> p1
 gg.stad1 + labs(subtitle = "Only Genes Missense Mutated in >= 1% of All Patients") -> gg.stad1t
 gg.stad1t + theme(text = element_text(size = 10)) -> p2
 gg.stad1.5 + labs(subtitle = "Only Genes Missense Mutated in >= 1.5% of All Patients") -> gg.stad1.5t
@@ -443,3 +442,4 @@ stad.figure <- ggarrange(p1, p2, p3,
 annotate_figure(stad.figure, top = text_grob("Mean Gene Distance Distributions of Both Random and STAD Genes on the STAD Network", size = 20, face = "bold")) -> stad.plot
 
 ggsave("~/tcga_biolinks1/Plots/stad.plot.png", plot = stad.plot, width = 18, height = 10)
+

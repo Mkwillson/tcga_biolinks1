@@ -202,6 +202,7 @@ ggsave("./gg.brca1.png", plot = gg.brca1, width = 10, height = 10)
 
 ###### 0.5% PATIENTS #######################################################################
 
+
 brca.graph.df %>%
   filter(Number.of.Missense.Mutations >=1) %>%
   filter(Percent.of.Patients.with.a.Missense.Mutation >= 0.5) -> brca.graph.df.filt0.5
@@ -570,7 +571,380 @@ ggplot(dat.brca.dam, aes(x=Distance, colour=Distribution)) +
 gg.brca.dam
 ggsave("./gg.brca.dam.png", plot = gg.brca.dam, width = 10, height = 10)
 
+##### ALL DAMAGING >0.466 and %>0.5 ##########################################################################
 
+brca.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 0.5) %>%
+  filter(PolyPhen.Mean >0.466)-> brca.graph.df.filt.dam.0.5
+
+unique(brca.graph.df.filt.dam.0.5$name) -> unique.genes.brca.dam.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.brca.dam.0.5 <- foreach(i=1:length(unique.genes.brca.dam.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.brca.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = unique.genes.brca.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.brca.dam.0.5,])}
+
+colnames(out.brca.dam.0.5) <- unique.genes.brca.dam.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(brca.graph),"name"), length(unique.genes.brca.dam.0.5)) -> all.genes.rand.brca.dam.0.5
+
+out.rand.brca.graph.dam.0.5 <- foreach(i=1:length(all.genes.rand.brca.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = all.genes.rand.brca.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.brca.dam.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.brca.graph.dam.0.5, file = "~/tcga_biolinks1/stats/out.rand.brca.graph.dam.0.5")
+saveRDS(out.brca.dam.0.5, file = "~/tcga_biolinks1/stats/out.brca.dam.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.brca.dam.0.5") -> out.brca.dam.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.brca.graph.dam.0.5") -> out.rand.brca.graph.dam.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.brca.dam.0.5))
+# hist(colMeans(out.rand.brca.graph.dam.0.5))
+
+# Turn inifnite into NAs
+out.brca.dam.0.5[which(is.infinite(out.brca.dam.0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.brca.graph.dam.0.5, na.rm = T),0.01) -> random.cutoff.dam.0.5.brca
+
+dat.brca.dam.0.5 <- data.frame(Distance = c(colMeans(out.brca.dam.0.5), colMeans(out.rand.brca.graph.dam.0.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.brca.dam.0.5)),rep("Random",nrow(out.rand.brca.graph.dam.0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.brca.dam.0.5), colMeans(out.rand.brca.graph.dam.0.5, na.rm = T)) -> ks.result.dam.0.5.brca
+
+# Print
+ks.result.dam.0.5.brca$statistic
+ks.result.dam.0.5.brca$p.value
+# length(ks.result2.brca$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.0.5.brca$statistic,2), ifelse(ks.result.dam.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.0.5.brca$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.brca$p.value,4)))) -> text.annot2
+length(ks.result.dam.0.5.brca$data$x) -> text.annot3
+
+dim(out.brca.dam.0.5)
+dim(out.rand.brca.graph.dam.0.5)
+
+# Create gg plot
+ggplot(dat.brca.dam.0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.brca.dam.0.5, aes(xintercept=random.cutoff.dam.0.5.brca,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and BRCA Genes on the BRCA Network") -> gg.brca.dam.0.5
+
+gg.brca.dam.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.brca.dam.0.5.png", plot = gg.brca.dam.0.5, width = 10, height = 10)
+
+##### ALL DAMAGING >0.466 and %>1.5 ##########################################################################
+
+brca.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 1.5) %>%
+  filter(PolyPhen.Mean >0.466)-> brca.graph.df.filt.dam.1.5
+
+unique(brca.graph.df.filt.dam.1.5$name) -> unique.genes.brca.dam.1.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.brca.dam.1.5 <- foreach(i=1:length(unique.genes.brca.dam.1.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.brca.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = unique.genes.brca.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.brca.dam.1.5,])}
+
+colnames(out.brca.dam.1.5) <- unique.genes.brca.dam.1.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(brca.graph),"name"), length(unique.genes.brca.dam.1.5)) -> all.genes.rand.brca.dam.1.5
+
+out.rand.brca.graph.dam.1.5 <- foreach(i=1:length(all.genes.rand.brca.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = all.genes.rand.brca.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.brca.dam.1.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.brca.graph.dam.1.5, file = "~/tcga_biolinks1/stats/out.rand.brca.graph.dam.1.5")
+saveRDS(out.brca.dam.1.5, file = "~/tcga_biolinks1/stats/out.brca.dam.1.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.brca.dam.1.5") -> out.brca.dam.1.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.brca.graph.dam.1.5") -> out.rand.brca.graph.dam.1.5
+
+# Create histogram of column means
+# hist(colMeans(out.brca.dam.1.5))
+# hist(colMeans(out.rand.brca.graph.dam.1.5))
+
+# Turn inifnite into NAs
+out.brca.dam.1.5[which(is.infinite(out.brca.dam.1.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.brca.graph.dam.1.5, na.rm = T),0.01) -> random.cutoff.dam.1.5.brca
+
+dat.brca.dam.1.5 <- data.frame(Distance = c(colMeans(out.brca.dam.1.5), colMeans(out.rand.brca.graph.dam.1.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.brca.dam.1.5)),rep("Random",nrow(out.rand.brca.graph.dam.1.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.brca.dam.1.5), colMeans(out.rand.brca.graph.dam.1.5, na.rm = T)) -> ks.result.dam.1.5.brca
+
+# Print
+ks.result.dam.1.5.brca$statistic
+ks.result.dam.1.5.brca$p.value
+# length(ks.result2.brca$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.1.5.brca$statistic,2), ifelse(ks.result.dam.1.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.1.5.brca$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.1.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.brca$p.value,4)))) -> text.annot2
+length(ks.result.dam.1.5.brca$data$x) -> text.annot3
+
+dim(out.brca.dam.1.5)
+dim(out.rand.brca.graph.dam.1.5)
+
+# Create gg plot
+ggplot(dat.brca.dam.1.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.brca.dam.1.5, aes(xintercept=random.cutoff.dam.1.5.brca,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and BRCA Genes on the BRCA Network") -> gg.brca.dam.1.5
+
+gg.brca.dam.1.5
+ggsave("~/tcga_biolinks1/Plots/gg.brca.dam.1.5.png", plot = gg.brca.dam.1.5, width = 10, height = 10)
+
+######
+
+#### DELETERIOUS <0.05 ##########################################################################
+
+brca.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(SIFT.Mean <0.05)-> brca.graph.df.filt.del
+
+unique(brca.graph.df.filt.del$name) -> unique.genes.brca.del
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.brca.del <- foreach(i=1:length(unique.genes.brca.del), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.brca.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = unique.genes.brca.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.brca.del,])}
+
+colnames(out.brca.del) <- unique.genes.brca.del
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(brca.graph),"name"), length(unique.genes.brca.del)) -> all.genes.rand.brca.del
+
+out.rand.brca.graph.del <- foreach(i=1:length(all.genes.rand.brca.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = all.genes.rand.brca.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.brca.del,])}
+
+# # Save results of distances
+saveRDS(out.rand.brca.graph.del, file = "~/tcga_biolinks1/stats/out.rand.brca.graph.del")
+saveRDS(out.brca.del, file = "~/tcga_biolinks1/stats/out.brca.del")
+
+# Create histogram of column means
+# hist(colMeans(out.brca.del))
+# hist(colMeans(out.rand.brca.graph.del))
+
+# Turn inifnite into NAs
+out.brca.del[which(is.infinite(out.brca.del))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.brca.graph.del, na.rm = T),0.01) -> random.cutoff.del.brca
+
+dat.brca.del <- data.frame(Distance = c(colMeans(out.brca.del), colMeans(out.rand.brca.graph.del, na.rm = T)),
+                           Distribution = factor(c(rep("Real",nrow(out.brca.del)),rep("Random",nrow(out.rand.brca.graph.del)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.brca.del), colMeans(out.rand.brca.graph.del, na.rm = T)) -> ks.result.del.brca
+
+# Print
+ks.result.del.brca$statistic
+ks.result.del.brca$p.value
+# length(ks.result2.brca$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.del.brca$statistic,2), ifelse(ks.result.del.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.brca$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.del.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.brca$p.value,4)))) -> text.annot2
+length(ks.result.del.brca$data$x) -> text.annot3
+
+dim(out.brca.del)
+dim(out.rand.brca.graph.del)
+
+# Create gg plot
+ggplot(dat.brca.del, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.brca.del, aes(xintercept=random.cutoff.del.brca,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and BRCA Genes on the BRCA Network") -> gg.brca.del
+
+gg.brca.del
+ggsave("./gg.brca.del.png", plot = gg.brca.del, width = 10, height = 10)
+
+##### ALL DELETERIOUS <0.05 and %>0.5 ##########################################################################
+
+brca.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 0.5) %>%
+  filter(SIFT.Mean <0.05)-> brca.graph.df.filt.del.0.5
+
+unique(brca.graph.df.filt.del.0.5$name) -> unique.genes.brca.del.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.brca.del.0.5 <- foreach(i=1:length(unique.genes.brca.del.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.brca.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = unique.genes.brca.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.brca.del.0.5,])}
+
+colnames(out.brca.del.0.5) <- unique.genes.brca.del.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(brca.graph),"name"), length(unique.genes.brca.del.0.5)) -> all.genes.rand.brca.del.0.5
+
+out.rand.brca.graph.del.0.5 <- foreach(i=1:length(all.genes.rand.brca.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    brca.graph,
+    to = all.genes.rand.brca.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.brca.del.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.brca.graph.del.0.5, file = "~/tcga_biolinks1/stats/out.rand.brca.graph.del.0.5")
+saveRDS(out.brca.del.0.5, file = "~/tcga_biolinks1/stats/out.brca.del.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.brca.del.0.5") -> out.brca.del.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.brca.graph.del.0.5") -> out.rand.brca.graph.del.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.brca.del.0.5))
+# hist(colMeans(out.rand.brca.graph.del.0.5))
+
+# Turn inifnite into NAs
+out.brca.del.0.5[which(is.infinite(out.brca.del.0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.brca.graph.del.0.5, na.rm = T),0.01) -> random.cutoff.del.0.5.brca
+
+dat.brca.del.0.5 <- data.frame(Distance = c(colMeans(out.brca.del.0.5), colMeans(out.rand.brca.graph.del.0.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.brca.del.0.5)),rep("Random",nrow(out.rand.brca.graph.del.0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.brca.del.0.5), colMeans(out.rand.brca.graph.del.0.5, na.rm = T)) -> ks.result.del.0.5.brca
+
+# Print
+ks.result.del.0.5.brca$statistic
+ks.result.del.0.5.brca$p.value
+# length(ks.result2.brca$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.del.0.5.brca$statistic,2), ifelse(ks.result.del.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.0.5.brca$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.del.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.brca$p.value,4)))) -> text.annot2
+length(ks.result.del.0.5.brca$data$x) -> text.annot3
+
+dim(out.brca.del.0.5)
+dim(out.rand.brca.graph.del.0.5)
+
+# Create gg plot
+ggplot(dat.brca.del.0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.brca.del.0.5, aes(xintercept=random.cutoff.del.0.5.brca,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and BRCA Genes on the BRCA Network") -> gg.brca.del.0.5
+
+gg.brca.del.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.brca.del.0.5.png", plot = gg.brca.del.0.5, width = 10, height = 10)
 
 #######################################
 
@@ -583,4 +957,13 @@ ggsave("./gg.brca.dam.png", plot = gg.brca.dam, width = 10, height = 10)
 # dev.off()
 #### close all the connections
 # graphics.off()
+
+#### ARRANGE GG PLOTS INTO FIGURE ##################################
+readRDS(file = "~/tcga_biolinks1/stats/out.brca0.5") -> out.brca0.5
+readRDS(file = "~/tcga_biolinks1/stats/out.rand.brca.graph0.5") -> out.rand.brca.graph0.5
+
+brca.figure <- ggarrange(gg.brca.0.5, gg.brca.1, gg.brca.1.5,
+                    labels = c("A", "B", "C"),
+                    ncol = 3, nrow = 1)
+
 

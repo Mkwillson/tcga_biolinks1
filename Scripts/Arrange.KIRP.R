@@ -414,7 +414,7 @@ gg.kirp.del.0.5
 ##### GGARRANGE ################################################################
 library(ggpubr)
 gg.kirp0.5 + labs(subtitle = "Only Genes Missense Mutated in >= 0.5% of All Patients") -> gg.kirp0.5t
-gg.kirp0.5t + theme(text = element_text(size = 10)) -> p1
+gg.kirp.0.5t + theme(text = element_text(size = 10)) -> p1
 gg.kirp1 + labs(subtitle = "Only Genes Missense Mutated in >= 1% of All Patients") -> gg.kirp1t
 gg.kirp1t + theme(text = element_text(size = 10)) -> p2
 gg.kirp1.5 + labs(subtitle = "Only Genes Missense Mutated in >= 1.5% of All Patients") -> gg.kirp1.5t
@@ -442,3 +442,4 @@ kirp.figure <- ggarrange(p1, p2, p3,
 annotate_figure(kirp.figure, top = text_grob("Mean Gene Distance Distributions of Both Random and KIRP Genes on the KIRP Network", size = 20, face = "bold")) -> kirp.plot
 
 ggsave("~/tcga_biolinks1/Plots/kirp.plot.png", plot = kirp.plot, width = 18, height = 10)
+

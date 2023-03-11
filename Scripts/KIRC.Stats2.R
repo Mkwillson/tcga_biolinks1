@@ -569,3 +569,378 @@ ggplot(dat.kirc.dam, aes(x=Distance, colour=Distribution)) +
 gg.kirc.dam
 ggsave("~/tcga_biolinks1/Plots/gg.kirc.dam.png", plot = gg.kirc.dam, width = 10, height = 10)
 
+##### ALL DAMAGING >0.466 and %>0.5 ##########################################################################
+
+kirc.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 0.5) %>%
+  filter(PolyPhen.Mean >0.466)-> kirc.graph.df.filt.dam.0.5
+
+unique(kirc.graph.df.filt.dam.0.5$name) -> unique.genes.kirc.dam.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.kirc.dam.0.5 <- foreach(i=1:length(unique.genes.kirc.dam.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.kirc.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = unique.genes.kirc.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.kirc.dam.0.5,])}
+
+colnames(out.kirc.dam.0.5) <- unique.genes.kirc.dam.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(kirc.graph),"name"), length(unique.genes.kirc.dam.0.5)) -> all.genes.rand.kirc.dam.0.5
+
+out.rand.kirc.graph.dam.0.5 <- foreach(i=1:length(all.genes.rand.kirc.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = all.genes.rand.kirc.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.kirc.dam.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.kirc.graph.dam.0.5, file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.dam.0.5")
+saveRDS(out.kirc.dam.0.5, file = "~/tcga_biolinks1/stats/out.kirc.dam.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.kirc.dam.0.5") -> out.kirc.dam.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.dam.0.5") -> out.rand.kirc.graph.dam.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.kirc.dam.0.5))
+# hist(colMeans(out.rand.kirc.graph.dam.0.5))
+
+# Turn inifnite into NAs
+out.kirc.dam.0.5[which(is.infinite(out.kirc.dam.0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.kirc.graph.dam.0.5, na.rm = T),0.01) -> random.cutoff.dam.0.5.kirc
+
+dat.kirc.dam.0.5 <- data.frame(Distance = c(colMeans(out.kirc.dam.0.5), colMeans(out.rand.kirc.graph.dam.0.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.kirc.dam.0.5)),rep("Random",nrow(out.rand.kirc.graph.dam.0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.kirc.dam.0.5), colMeans(out.rand.kirc.graph.dam.0.5, na.rm = T)) -> ks.result.dam.0.5.kirc
+
+# Print
+ks.result.dam.0.5.kirc$statistic
+ks.result.dam.0.5.kirc$p.value
+# length(ks.result2.kirc$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.0.5.kirc$statistic,2), ifelse(ks.result.dam.0.5.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.kirc$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.0.5.kirc$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.0.5.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.kirc$p.value,4)))) -> text.annot2
+length(ks.result.dam.0.5.kirc$data$x) -> text.annot3
+
+dim(out.kirc.dam.0.5)
+dim(out.rand.kirc.graph.dam.0.5)
+
+# Create gg plot
+ggplot(dat.kirc.dam.0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.kirc.dam.0.5, aes(xintercept=random.cutoff.dam.0.5.kirc,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and kirc Genes on the kirc Network") -> gg.kirc.dam.0.5
+
+gg.kirc.dam.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.kirc.dam.0.5.png", plot = gg.kirc.dam.0.5, width = 10, height = 10)
+
+##### ALL DAMAGING >0.466 and %>1.5 ##########################################################################
+
+kirc.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 1.5) %>%
+  filter(PolyPhen.Mean >0.466)-> kirc.graph.df.filt.dam.1.5
+
+unique(kirc.graph.df.filt.dam.1.5$name) -> unique.genes.kirc.dam.1.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.kirc.dam.1.5 <- foreach(i=1:length(unique.genes.kirc.dam.1.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.kirc.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = unique.genes.kirc.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.kirc.dam.1.5,])}
+
+colnames(out.kirc.dam.1.5) <- unique.genes.kirc.dam.1.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(kirc.graph),"name"), length(unique.genes.kirc.dam.1.5)) -> all.genes.rand.kirc.dam.1.5
+
+out.rand.kirc.graph.dam.1.5 <- foreach(i=1:length(all.genes.rand.kirc.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = all.genes.rand.kirc.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.kirc.dam.1.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.kirc.graph.dam.1.5, file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.dam.1.5")
+saveRDS(out.kirc.dam.1.5, file = "~/tcga_biolinks1/stats/out.kirc.dam.1.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.kirc.dam.1.5") -> out.kirc.dam.1.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.dam.1.5") -> out.rand.kirc.graph.dam.1.5
+
+# Create histogram of column means
+# hist(colMeans(out.kirc.dam.1.5))
+# hist(colMeans(out.rand.kirc.graph.dam.1.5))
+
+# Turn inifnite into NAs
+out.kirc.dam.1.5[which(is.infinite(out.kirc.dam.1.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.kirc.graph.dam.1.5, na.rm = T),0.01) -> random.cutoff.dam.1.5.kirc
+
+dat.kirc.dam.1.5 <- data.frame(Distance = c(colMeans(out.kirc.dam.1.5), colMeans(out.rand.kirc.graph.dam.1.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.kirc.dam.1.5)),rep("Random",nrow(out.rand.kirc.graph.dam.1.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.kirc.dam.1.5), colMeans(out.rand.kirc.graph.dam.1.5, na.rm = T)) -> ks.result.dam.1.5.kirc
+
+# Print
+ks.result.dam.1.5.kirc$statistic
+ks.result.dam.1.5.kirc$p.value
+# length(ks.result2.kirc$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.1.5.kirc$statistic,2), ifelse(ks.result.dam.1.5.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.kirc$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.1.5.kirc$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.1.5.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.kirc$p.value,4)))) -> text.annot2
+length(ks.result.dam.1.5.kirc$data$x) -> text.annot3
+
+dim(out.kirc.dam.1.5)
+dim(out.rand.kirc.graph.dam.1.5)
+
+# Create gg plot
+ggplot(dat.kirc.dam.1.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.kirc.dam.1.5, aes(xintercept=random.cutoff.dam.1.5.kirc,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and kirc Genes on the kirc Network") -> gg.kirc.dam.1.5
+
+gg.kirc.dam.1.5
+ggsave("~/tcga_biolinks1/Plots/gg.kirc.dam.1.5.png", plot = gg.kirc.dam.1.5, width = 10, height = 10)
+
+
+
+#### DELETERIOUS <0.05 ##########################################################################
+
+kirc.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(SIFT.Mean <0.05)-> kirc.graph.df.filt.del
+
+unique(kirc.graph.df.filt.del$name) -> unique.genes.kirc.del
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.kirc.del <- foreach(i=1:length(unique.genes.kirc.del), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.kirc.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = unique.genes.kirc.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.kirc.del,])}
+
+colnames(out.kirc.del) <- unique.genes.kirc.del
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(kirc.graph),"name"), length(unique.genes.kirc.del)) -> all.genes.rand.kirc.del
+
+out.rand.kirc.graph.del <- foreach(i=1:length(all.genes.rand.kirc.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = all.genes.rand.kirc.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.kirc.del,])}
+
+# # Save results of distances
+saveRDS(out.rand.kirc.graph.del, file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.del")
+saveRDS(out.kirc.del, file = "~/tcga_biolinks1/stats/out.kirc.del")
+
+# Create histogram of column means
+# hist(colMeans(out.kirc.del))
+# hist(colMeans(out.rand.kirc.graph.del))
+
+# Turn inifnite into NAs
+out.kirc.del[which(is.infinite(out.kirc.del))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.kirc.graph.del, na.rm = T),0.01) -> random.cutoff.del.kirc
+
+dat.kirc.del <- data.frame(Distance = c(colMeans(out.kirc.del), colMeans(out.rand.kirc.graph.del, na.rm = T)),
+                           Distribution = factor(c(rep("Real",nrow(out.kirc.del)),rep("Random",nrow(out.rand.kirc.graph.del)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.kirc.del), colMeans(out.rand.kirc.graph.del, na.rm = T)) -> ks.result.del.kirc
+
+# Print
+ks.result.del.kirc$statistic
+ks.result.del.kirc$p.value
+# length(ks.result2.kirc$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.del.kirc$statistic,2), ifelse(ks.result.del.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.kirc$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.kirc$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.del.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.kirc$p.value,4)))) -> text.annot2
+length(ks.result.del.kirc$data$x) -> text.annot3
+
+dim(out.kirc.del)
+dim(out.rand.kirc.graph.del)
+
+# Create gg plot
+ggplot(dat.kirc.del, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.kirc.del, aes(xintercept=random.cutoff.del.kirc,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and BRCA Genes on the BRCA Network") -> gg.kirc.del
+
+gg.kirc.del
+ggsave("./gg.kirc.del.png", plot = gg.kirc.del, width = 10, height = 10)
+
+##### ALL DELETERIOUS <0.05 and %>0.5 ##########################################################################
+
+kirc.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 0.5) %>%
+  filter(SIFT.Mean <0.05)-> kirc.graph.df.filt.del.0.5
+
+unique(kirc.graph.df.filt.del.0.5$name) -> unique.genes.kirc.del.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.kirc.del.0.5 <- foreach(i=1:length(unique.genes.kirc.del.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.kirc.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = unique.genes.kirc.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.kirc.del.0.5,])}
+
+colnames(out.kirc.del.0.5) <- unique.genes.kirc.del.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(kirc.graph),"name"), length(unique.genes.kirc.del.0.5)) -> all.genes.rand.kirc.del.0.5
+
+out.rand.kirc.graph.del.0.5 <- foreach(i=1:length(all.genes.rand.kirc.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    kirc.graph,
+    to = all.genes.rand.kirc.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.kirc.del.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.kirc.graph.del.0.5, file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.del.0.5")
+saveRDS(out.kirc.del.0.5, file = "~/tcga_biolinks1/stats/out.kirc.del.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.kirc.del.0.5") -> out.kirc.del.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.kirc.graph.del.0.5") -> out.rand.kirc.graph.del.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.kirc.del.0.5))
+# hist(colMeans(out.rand.kirc.graph.del.0.5))
+
+# Turn inifnite into NAs
+out.kirc.del.0.5[which(is.infinite(out.kirc.del.0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.kirc.graph.del.0.5, na.rm = T),0.01) -> random.cutoff.del.0.5.kirc
+
+dat.kirc.del.0.5 <- data.frame(Distance = c(colMeans(out.kirc.del.0.5), colMeans(out.rand.kirc.graph.del.0.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.kirc.del.0.5)),rep("Random",nrow(out.rand.kirc.graph.del.0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.kirc.del.0.5), colMeans(out.rand.kirc.graph.del.0.5, na.rm = T)) -> ks.result.del.0.5.kirc
+
+# Print
+ks.result.del.0.5.kirc$statistic
+ks.result.del.0.5.kirc$p.value
+# length(ks.result2.kirc$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.del.0.5.kirc$statistic,2), ifelse(ks.result.del.0.5.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.kirc$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.0.5.kirc$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.del.0.5.kirc$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.kirc$p.value,4)))) -> text.annot2
+length(ks.result.del.0.5.kirc$data$x) -> text.annot3
+
+dim(out.kirc.del.0.5)
+dim(out.rand.kirc.graph.del.0.5)
+
+# Create gg plot
+ggplot(dat.kirc.del.0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.kirc.del.0.5, aes(xintercept=random.cutoff.del.0.5.kirc,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and KIRC Genes on the KIRC Network") -> gg.kirc.del.0.5
+
+gg.kirc.del.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.kirc.del.0.5.png", plot = gg.kirc.del.0.5, width = 10, height = 10)
+

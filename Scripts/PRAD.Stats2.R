@@ -8,8 +8,6 @@ prad.graph <- readRDS(file = "~/tcga_biolinks1/RDS/prad.graph")
 
 # Read table into R
 read.csv(file = "~/tcga_biolinks1/GRAPHML/prad5.node.csv") -> prad.graph.df
-saveRDS(prad.graph.df, file = "~/tcga_biolinks1/RDS/prad.graph.df")
-prad.graph.df$Percent.of.Patients.with.a.Missense.Mutation
 
 ##### 1.5% PATIENTS ##############################################################
 
@@ -570,6 +568,379 @@ ggplot(dat.prad.dam, aes(x=Distance, colour=Distribution)) +
 
 gg.prad.dam
 ggsave("~/tcga_biolinks1/gg.prad.dam.png", plot = gg.prad.dam, width = 10, height = 10)
+
+##### ALL DAMAGING >0.466 and %>0.5 ##########################################################################
+
+prad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 0.5) %>%
+  filter(PolyPhen.Mean >0.466)-> prad.graph.df.filt.dam.0.5
+
+unique(prad.graph.df.filt.dam.0.5$name) -> unique.genes.prad.dam.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.prad.dam.0.5 <- foreach(i=1:length(unique.genes.prad.dam.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.prad.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = unique.genes.prad.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.prad.dam.0.5,])}
+
+colnames(out.prad.dam.0.5) <- unique.genes.prad.dam.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(prad.graph),"name"), length(unique.genes.prad.dam.0.5)) -> all.genes.rand.prad.dam.0.5
+
+out.rand.prad.graph.dam.0.5 <- foreach(i=1:length(all.genes.rand.prad.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = all.genes.rand.prad.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.prad.dam.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.prad.graph.dam.0.5, file = "~/tcga_biolinks1/stats/out.rand.prad.graph.dam.0.5")
+saveRDS(out.prad.dam.0.5, file = "~/tcga_biolinks1/stats/out.prad.dam.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.prad.dam.0.5") -> out.prad.dam.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.prad.graph.dam.0.5") -> out.rand.prad.graph.dam.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.prad.dam.0.5))
+# hist(colMeans(out.rand.prad.graph.dam.0.5))
+
+# Turn inifnite into NAs
+out.prad.dam.0.5[which(is.infinite(out.prad.dam.0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.prad.graph.dam.0.5, na.rm = T),0.01) -> random.cutoff.dam.0.5.prad
+
+dat.prad.dam.0.5 <- data.frame(Distance = c(colMeans(out.prad.dam.0.5), colMeans(out.rand.prad.graph.dam.0.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.prad.dam.0.5)),rep("Random",nrow(out.rand.prad.graph.dam.0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.prad.dam.0.5), colMeans(out.rand.prad.graph.dam.0.5, na.rm = T)) -> ks.result.dam.0.5.prad
+
+# Print
+ks.result.dam.0.5.prad$statistic
+ks.result.dam.0.5.prad$p.value
+# length(ks.result2.prad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.0.5.prad$statistic,2), ifelse(ks.result.dam.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.0.5.prad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.prad$p.value,4)))) -> text.annot2
+length(ks.result.dam.0.5.prad$data$x) -> text.annot3
+
+dim(out.prad.dam.0.5)
+dim(out.rand.prad.graph.dam.0.5)
+
+# Create gg plot
+ggplot(dat.prad.dam.0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.prad.dam.0.5, aes(xintercept=random.cutoff.dam.0.5.prad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and PRAD Genes on the PRAD Network") -> gg.prad.dam.0.5
+
+gg.prad.dam.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.prad.dam.0.5.png", plot = gg.prad.dam.0.5, width = 10, height = 10)
+
+##### ALL DAMAGING >0.466 and %>1.5 ##########################################################################
+
+prad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 1.5) %>%
+  filter(PolyPhen.Mean >0.466)-> prad.graph.df.filt.dam.1.5
+
+unique(prad.graph.df.filt.dam.1.5$name) -> unique.genes.prad.dam.1.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.prad.dam.1.5 <- foreach(i=1:length(unique.genes.prad.dam.1.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.prad.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = unique.genes.prad.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.prad.dam.1.5,])}
+
+colnames(out.prad.dam.1.5) <- unique.genes.prad.dam.1.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(prad.graph),"name"), length(unique.genes.prad.dam.1.5)) -> all.genes.rand.prad.dam.1.5
+
+out.rand.prad.graph.dam.1.5 <- foreach(i=1:length(all.genes.rand.prad.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = all.genes.rand.prad.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.prad.dam.1.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.prad.graph.dam.1.5, file = "~/tcga_biolinks1/stats/out.rand.prad.graph.dam.1.5")
+saveRDS(out.prad.dam.1.5, file = "~/tcga_biolinks1/stats/out.prad.dam.1.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.prad.dam.1.5") -> out.prad.dam.1.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.prad.graph.dam.1.5") -> out.rand.prad.graph.dam.1.5
+
+# Create histogram of column means
+# hist(colMeans(out.prad.dam.1.5))
+# hist(colMeans(out.rand.prad.graph.dam.1.5))
+
+# Turn inifnite into NAs
+out.prad.dam.1.5[which(is.infinite(out.prad.dam.1.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.prad.graph.dam.1.5, na.rm = T),0.01) -> random.cutoff.dam.1.5.prad
+
+dat.prad.dam.1.5 <- data.frame(Distance = c(colMeans(out.prad.dam.1.5), colMeans(out.rand.prad.graph.dam.1.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.prad.dam.1.5)),rep("Random",nrow(out.rand.prad.graph.dam.1.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.prad.dam.1.5), colMeans(out.rand.prad.graph.dam.1.5, na.rm = T)) -> ks.result.dam.1.5.prad
+
+# Print
+ks.result.dam.1.5.prad$statistic
+ks.result.dam.1.5.prad$p.value
+# length(ks.result2.prad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.1.5.prad$statistic,2), ifelse(ks.result.dam.1.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.1.5.prad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.1.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.prad$p.value,4)))) -> text.annot2
+length(ks.result.dam.1.5.prad$data$x) -> text.annot3
+
+dim(out.prad.dam.1.5)
+dim(out.rand.prad.graph.dam.1.5)
+
+# Create gg plot
+ggplot(dat.prad.dam.1.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.prad.dam.1.5, aes(xintercept=random.cutoff.dam.1.5.prad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and PRAD Genes on the PRAD Network") -> gg.prad.dam.1.5
+
+gg.prad.dam.1.5
+ggsave("~/tcga_biolinks1/Plots/gg.prad.dam.1.5.png", plot = gg.prad.dam.1.5, width = 10, height = 10)
+
+#### DELETERIOUS <0.05 ##########################################################################
+
+prad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(SIFT.Mean <0.05)-> prad.graph.df.filt.del
+
+unique(prad.graph.df.filt.del$name) -> unique.genes.prad.del
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.prad.del <- foreach(i=1:length(unique.genes.prad.del), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.prad.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = unique.genes.prad.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.prad.del,])}
+
+colnames(out.prad.del) <- unique.genes.prad.del
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(prad.graph),"name"), length(unique.genes.prad.del)) -> all.genes.rand.prad.del
+
+out.rand.prad.graph.del <- foreach(i=1:length(all.genes.rand.prad.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = all.genes.rand.prad.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.prad.del,])}
+
+# # Save results of distances
+saveRDS(out.rand.prad.graph.del, file = "~/tcga_biolinks1/stats/out.rand.prad.graph.del")
+saveRDS(out.prad.del, file = "~/tcga_biolinks1/stats/out.prad.del")
+
+# Create histogram of column means
+# hist(colMeans(out.prad.del))
+# hist(colMeans(out.rand.prad.graph.del))
+
+# Turn inifnite into NAs
+out.prad.del[which(is.infinite(out.prad.del))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.prad.graph.del, na.rm = T),0.01) -> random.cutoff.del.prad
+
+dat.prad.del <- data.frame(Distance = c(colMeans(out.prad.del), colMeans(out.rand.prad.graph.del, na.rm = T)),
+                           Distribution = factor(c(rep("Real",nrow(out.prad.del)),rep("Random",nrow(out.rand.prad.graph.del)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.prad.del), colMeans(out.rand.prad.graph.del, na.rm = T)) -> ks.result.del.prad
+
+# Print
+ks.result.del.prad$statistic
+ks.result.del.prad$p.value
+# length(ks.result2.prad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.del.prad$statistic,2), ifelse(ks.result.del.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.prad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.del.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.prad$p.value,4)))) -> text.annot2
+length(ks.result.del.prad$data$x) -> text.annot3
+
+dim(out.prad.del)
+dim(out.rand.prad.graph.del)
+
+# Create gg plot
+ggplot(dat.prad.del, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.prad.del, aes(xintercept=random.cutoff.del.prad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and PRAD Genes on the PRAD Network") -> gg.prad.del
+
+gg.prad.del
+ggsave("~/tcga_biolinks1/Plots/gg.prad.del.png", plot = gg.prad.del, width = 10, height = 10)
+
+##### ALL DELETERIOUS <0.05 and %>0.5 ##########################################################################
+
+prad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.with.a.Missense.Mutation >= 0.5) %>%
+  filter(SIFT.Mean <0.05)-> prad.graph.df.filt.del.0.5
+
+unique(prad.graph.df.filt.del.0.5$name) -> unique.genes.prad.del.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.prad.del.0.5 <- foreach(i=1:length(unique.genes.prad.del.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.prad.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = unique.genes.prad.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.prad.del.0.5,])}
+
+colnames(out.prad.del.0.5) <- unique.genes.prad.del.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(prad.graph),"name"), length(unique.genes.prad.del.0.5)) -> all.genes.rand.prad.del.0.5
+
+out.rand.prad.graph.del.0.5 <- foreach(i=1:length(all.genes.rand.prad.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    prad.graph,
+    to = all.genes.rand.prad.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.prad.del.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.prad.graph.del.0.5, file = "~/tcga_biolinks1/stats/out.rand.prad.graph.del.0.5")
+saveRDS(out.prad.del.0.5, file = "~/tcga_biolinks1/stats/out.prad.del.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.prad.del.0.5") -> out.prad.del.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.prad.graph.del.0.5") -> out.rand.prad.graph.del.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.prad.del.0.5))
+# hist(colMeans(out.rand.prad.graph.del.0.5))
+
+# Turn inifnite into NAs
+out.prad.del.0.5[which(is.infinite(out.prad.del.0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.prad.graph.del.0.5, na.rm = T),0.01) -> random.cutoff.del.0.5.prad
+
+dat.prad.del.0.5 <- data.frame(Distance = c(colMeans(out.prad.del.0.5), colMeans(out.rand.prad.graph.del.0.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.prad.del.0.5)),rep("Random",nrow(out.rand.prad.graph.del.0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.prad.del.0.5), colMeans(out.rand.prad.graph.del.0.5, na.rm = T)) -> ks.result.del.0.5.prad
+
+# Print
+ks.result.del.0.5.prad$statistic
+ks.result.del.0.5.prad$p.value
+# length(ks.result2.prad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.del.0.5.prad$statistic,2), ifelse(ks.result.del.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.0.5.prad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.del.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.prad$p.value,4)))) -> text.annot2
+length(ks.result.del.0.5.prad$data$x) -> text.annot3
+
+dim(out.prad.del.0.5)
+dim(out.rand.prad.graph.del.0.5)
+
+# Create gg plot
+ggplot(dat.prad.del.0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.prad.del.0.5, aes(xintercept=random.cutoff.del.0.5.prad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and PRAD Genes on the PRAD Network") -> gg.prad.del.0.5
+
+gg.prad.del.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.prad.del.0.5.png", plot = gg.prad.del.0.5, width = 10, height = 10)
 
 
 

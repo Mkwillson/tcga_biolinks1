@@ -12,7 +12,7 @@ Step 2 - Real.filter script:
 
 Step 3 - Rename.Network script:
 - The expression networks have genes with ensembl id with versions (e.g. .number on the end) and must be converted to ensembl ids with no version on the end in order to annotate mutation data.
-- This code just removes the .number on the end of the ensemblid
+- This code just removes the .number on the end of the ensembl id
 
 Step 5 - All.mutation.data script:
 - This script manipulates mutation data in to a 'per gene' format for annotation onto expression networks

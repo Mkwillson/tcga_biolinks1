@@ -481,7 +481,6 @@ ggsave("./gg.brca.poss.png", plot = gg.brca.poss, width = 10, height = 10)
 
 ##### ALL DAMAGING >0.466 ##########################################################################
 
-brca.graph.df$PolyPhen.Mean
 brca.graph.df %>%
   filter(Number.of.Missense.Mutations >=1) %>%
   filter(PolyPhen.Mean >0.466)-> brca.graph.df.filt.dam

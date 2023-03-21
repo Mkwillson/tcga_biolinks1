@@ -21,17 +21,17 @@ ggplot(brca.graph.df.filt0.5, aes(x=rank, y = Percent.of.Patients.With.Mutation,
   geom_line() +
   geom_point(color = "red") +
   labs(x = "Rank") +
-  labs(y = "Percent of Patients With Mutation") +
+  labs(y = "Percent of Patients") +
   theme_minimal() +
   geom_text_repel(nudge_x = 100, nudge_y = 2, max.overlaps = Inf) +
   ggtitle("Breast Invasive Carcinoma") +
+  theme(text = element_text(size = 15)) +
   theme(plot.title = element_text(hjust = 0.5)) -> rank.brca0.5
 
 rank.brca0.5
 ggsave("~/tcga_biolinks1/Rank/rank.brca0.5.png", plot = rank.brca0.5, width = 10, height = 5)
 
 #### PRAD ######################################################################
-
 
 prad.graph <- readRDS(file = "~/tcga_biolinks1/RDS/prad.graph")
 read.csv(file = "~/tcga_biolinks1/GRAPHML/prad5.node.csv") -> prad.graph.df
@@ -52,10 +52,11 @@ ggplot(prad.graph.df.filt0.5, aes(x=rank, y = Percent.of.Patients.With.Mutation,
   geom_line() +
   geom_point(color = "red") +
   labs(x = "Rank") +
-  labs(y = "Percent of Patients With Mutation") +
+  labs(y = "Percent of Patients") +
   theme_minimal() +
   geom_text_repel(nudge_x = 50, nudge_y = 2, max.overlaps = Inf) +
   ggtitle("Prostate Adenocarcinoma") +
+  theme(text = element_text(size = 15)) +
   theme(plot.title = element_text(hjust = 0.5)) -> rank.prad0.5
 
 rank.prad0.5
@@ -82,11 +83,13 @@ ggplot(luad.graph.df.filt0.5, aes(x=rank, y = Percent.of.Patients.With.Mutation,
   geom_line() +
   geom_point(color = "red") +
   labs(x = "Rank") +
-  labs(y = "Percent of Patients With Mutation") +
+  labs(y = "Percent of Patients") +
   theme_minimal() +
   geom_text_repel(nudge_x = 500, nudge_y = 2, max.overlaps = Inf) +
   ggtitle("Lung Adenocarcinoma") +
+  theme(text = element_text(size = 15)) +
   theme(plot.title = element_text(hjust = 0.5)) -> rank.luad0.5
+
 rank.luad0.5
 ggsave("~/tcga_biolinks1/Rank/rank.luad0.5.png", plot = rank.luad0.5, width = 10, height = 5)
 
@@ -111,10 +114,11 @@ ggplot(stad.graph.df.filt0.5, aes(x=rank, y = Percent.of.Patients.With.Mutation,
   geom_line() +
   geom_point(color = "red") +
   labs(x = "Rank") +
-  labs(y = "Percent of Patients With Mutation") +
+  labs(y = "Percent of Patients") +
   theme_minimal() +
   geom_text_repel(nudge_x = 500, nudge_y = 2, max.overlaps = Inf) +
   ggtitle("Stomach Adenocarcinoma") +
+  theme(text = element_text(size = 15)) +
   theme(plot.title = element_text(hjust = 0.5)) -> rank.stad0.5
 
 rank.stad0.5
@@ -142,10 +146,11 @@ ggplot(kirp.graph.df.filt0.5, aes(x=rank, y = Percent.of.Patients.With.Mutation,
   geom_line() +
   geom_point(color = "red") +
   labs(x = "Rank") +
-  labs(y = "Percent of Patients With Mutation") +
+  labs(y = "Percent of Patients") +
   theme_minimal() +
   geom_text_repel(nudge_x = 50, nudge_y = 0.5, max.overlaps = Inf) +
   ggtitle("Kidney Renal Papillary Cell Carcinoma") +
+  theme(text = element_text(size = 15)) +
   theme(plot.title = element_text(hjust = 0.5)) -> rank.kirp0.5
 
 rank.kirp0.5
@@ -173,10 +178,11 @@ ggplot(kirc.graph.df.filt0.5, aes(x=rank, y = Percent.of.Patients.With.Mutation,
   geom_line() +
   geom_point(color = "red") +
   labs(x = "Rank") +
-  labs(y = "Percent of Patients With Mutation") +
+  labs(y = "Percent of Patients") +
   theme_minimal() +
   geom_text_repel(nudge_x = 150, nudge_y = 3, max.overlaps = Inf) +
   ggtitle("Kidney Renal Clear Cell Carcinoma") +
+  theme(text = element_text(size = 15)) +
   theme(plot.title = element_text(hjust = 0.5)) -> rank.kirc0.5
 
 
@@ -184,18 +190,37 @@ rank.kirc0.5
 ggsave("~/tcga_biolinks1/Rank/rank.kirc0.5.png", plot = rank.kirc0.5, width = 10, height = 5)
 
 ################################################################################
-rank.brca0.5 + theme(text = element_text(size = 10)) -> p1
-rank.kirc0.5 + theme(text = element_text(size = 10)) -> p2
-rank.kirp0.5 + theme(text = element_text(size = 10)) -> p3
-rank.luad0.5 + theme(text = element_text(size = 10)) -> p4
-rank.prad0.5 + theme(text = element_text(size = 10)) -> p5
-rank.stad0.5 + theme(text = element_text(size = 10)) -> p6
-rank.figure <- ggarrange(p1, p2, p3, p4, p5, p6,
+
+rank.figure <- ggarrange(rank.brca0.5, rank.kirc0.5, rank.kirp0.5, rank.luad0.5, rank.prad0.5, rank.stad0.5,
                          labels = c("A", "B", "C", "D", "E", "F"),
                          common.legend = TRUE, legend = "bottom",
-                         ncol = 3, nrow = 1)
+                         ncol = 3, nrow = 2)
 annotate_figure(rank.figure, top = text_grob("Genes Ranked by Percent of Patients With Mutated Gene", size = 20, face = "bold")) -> rank.plot
 rank.plot
-ggsave("~/tcga_biolinks1/Rank/rank.plot.png", plot = brca.plot, width = 28, height = 10)
+ggsave("~/tcga_biolinks1/Rank/rank.plot.png", plot = rank.plot, width = 24, height = 12)
 
+##
+rank.figure.1 <- ggarrange(rank.brca0.5, rank.kirc0.5,
+                         labels = c("A", "B"),
+                         common.legend = TRUE, legend = "bottom",
+                         ncol = 2, nrow = 1)
+rank.figure.1
 
+rank.figure.2 <- ggarrange(rank.kirp0.5, rank.luad0.5,
+                           labels = c("C", "D"),
+                           common.legend = TRUE, legend = "bottom",
+                           ncol = 2, nrow = 1)
+rank.figure.2
+
+rank.figure.3 <- ggarrange(rank.prad0.5, rank.stad0.5,
+                           labels = c("E", "F"),
+                           common.legend = TRUE, legend = "bottom",
+                           ncol = 2, nrow = 1)
+rank.figure.3
+
+rank.figure <- ggarrange(rank.figure.1, rank.figure.2, rank.figure.3,
+                         ncol = 1, nrow = 3)
+
+ggsave("~/tcga_biolinks1/Rank/rank.figure.1.png", plot = rank.figure.1, width = 18, height = 8)
+ggsave("~/tcga_biolinks1/Rank/rank.figure.2.png", plot = rank.figure.2, width = 18, height = 8)
+ggsave("~/tcga_biolinks1/Rank/rank.figure.3.png", plot = rank.figure.3, width = 18, height = 8)

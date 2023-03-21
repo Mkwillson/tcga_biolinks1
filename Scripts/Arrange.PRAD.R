@@ -22,7 +22,7 @@ ks.result0.5.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result0.5.prad$statistic,2), ifelse(ks.result0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result0.5.prad$statistic,2), ifelse(ks.result0.5.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result0.5.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result0.5.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.prad$p.value,4)))) -> text.annot2
 length(ks.result0.5.prad$data$x) -> text.annot3
@@ -69,7 +69,7 @@ ks.result1.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result1.prad$statistic,2), ifelse(ks.result1.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result1.prad$statistic,2), ifelse(ks.result1.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result1.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result1.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result1.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.prad$p.value,4)))) -> text.annot2
 length(ks.result1.prad$data$x) -> text.annot3
@@ -116,22 +116,22 @@ ks.result1.5.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result1.5.prad$statistic,2), ifelse(ks.result1.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.5.prad$p.value,2)))) -> text.annot
+
+paste0("D = ",round(ks.result1.5.prad$statistic,2), ifelse(ks.result1.5.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result1.5.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result1.5.prad$statistic,2)) -> text.annot1
-paste0(ifelse(ks.result1.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.5.prad$p.value,4)))) -> text.annot2
+paste0(ifelse(ks.result1.5.prad$p.value==0, " p < 0.0001", paste0(" p = ",round(ks.result1.5.prad$p.value,8)))) -> text.annot2
 length(ks.result1.5.prad$data$x) -> text.annot3
 
 dim(out.prad1.5)
 dim(out.rand.prad.graph1.5)
 
 # Create gg plot
-
 ggplot(dat.prad1.5, aes(x=Distance, colour=Distribution)) +
   geom_density() +
   geom_vline(data=dat.prad1.5, aes(xintercept=random.cutoff1.5.prad,  colour=Distribution),
              linetype="dashed", linewidth=1) +
   annotate("text", x = 3.45, y = 1.75, label = text.annot) +
-  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  # annotate("text", x = 4.45, y = 1.65, label = text.annot2) +
   annotate("text", x = 3.45, y = 1.55, label = paste0("N = ",text.annot3)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
@@ -162,7 +162,7 @@ ks.result.prob.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.prob.prad$statistic,2), ifelse(ks.result.prob.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.prob.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.prob.prad$statistic,2), ifelse(ks.result.prob.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.prob.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.prob.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.prob.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.prob.prad$p.value,4)))) -> text.annot2
 length(ks.result.prob.prad$data$x) -> text.annot3
@@ -184,6 +184,7 @@ ggplot(dat.prad.prob, aes(x=Distance, colour=Distribution)) +
   ggtitle(NULL) -> gg.prad.prob
 
 gg.prad.prob
+
 #### POSS DAMAGING #############################################################
 
 readRDS(file = "~/tcga_biolinks1/stats/out.prad.poss") -> out.prad.poss
@@ -207,7 +208,7 @@ ks.result.poss.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.poss.prad$statistic,2), ifelse(ks.result.poss.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.poss.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.poss.prad$statistic,2), ifelse(ks.result.poss.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.poss.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.poss.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.poss.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.poss.prad$p.value,4)))) -> text.annot2
 length(ks.result.poss.prad$data$x) -> text.annot3
@@ -253,7 +254,7 @@ ks.result.dam.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.dam.prad$statistic,2), ifelse(ks.result.dam.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.prad$statistic,2), ifelse(ks.result.dam.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.dam.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.dam.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.dam.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.prad$p.value,4)))) -> text.annot2
 length(ks.result.dam.prad$data$x) -> text.annot3
@@ -299,7 +300,7 @@ ks.result.dam.0.5.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.dam.0.5.prad$statistic,2), ifelse(ks.result.dam.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.0.5.prad$statistic,2), ifelse(ks.result.dam.0.5.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.dam.0.5.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.dam.0.5.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.dam.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.prad$p.value,4)))) -> text.annot2
 length(ks.result.dam.0.5.prad$data$x) -> text.annot3
@@ -345,7 +346,7 @@ ks.result.del.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.del.prad$statistic,2), ifelse(ks.result.del.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.prad$statistic,2), ifelse(ks.result.del.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.del.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.del.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.del.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.prad$p.value,4)))) -> text.annot2
 length(ks.result.del.prad$data$x) -> text.annot3
@@ -390,7 +391,7 @@ ks.result.del.0.5.prad$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.del.0.5.prad$statistic,2), ifelse(ks.result.del.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.prad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.0.5.prad$statistic,2), ifelse(ks.result.del.0.5.prad$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.del.0.5.prad$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.del.0.5.prad$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.del.0.5.prad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.prad$p.value,4)))) -> text.annot2
 length(ks.result.del.0.5.prad$data$x) -> text.annot3
@@ -413,7 +414,6 @@ ggplot(dat.prad.del.0.5, aes(x=Distance, colour=Distribution)) +
 
 gg.prad.del.0.5
 ##### GGARRANGE ################################################################
-
 library(ggpubr)
 gg.prad0.5 + labs(subtitle = "Only Genes Missense Mutated in >= 0.5% of All Patients") -> gg.prad0.5t
 gg.prad0.5t + theme(text = element_text(size = 10)) -> p1
@@ -432,7 +432,7 @@ in >=0.5% of All Patients") -> gg.prad.dam.0.5t
 gg.prad.dam.0.5t + theme(text = element_text(size = 10)) -> p7
 gg.prad.del + labs(subtitle = "Only Genes with Deleterious Missense Mutations") -> gg.prad.delt
 gg.prad.delt + theme(text = element_text(size = 10)) -> p8
-gg.prad.del.0.5 + labs(subtitle = "Only Genes with Deleterious Missense Mutations, in >0.5% of All Patients") -> gg.prad.del.0.5t
+gg.prad.del.0.5 + labs(subtitle = "Only Genes with Deleterious Missense Mutations, in >= 0.5% of All Patients") -> gg.prad.del.0.5t
 gg.prad.del.0.5t + theme(text = element_text(size = 10)) -> p9
 
 prad.figure <- ggarrange(p1, p2, p3, 
@@ -441,6 +441,8 @@ prad.figure <- ggarrange(p1, p2, p3,
                          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I"),
                          common.legend = TRUE, legend = "bottom",
                          ncol = 3, nrow = 3)
+
+
 annotate_figure(prad.figure, top = text_grob("Mean Gene Distance Distributions of Both Random and PRAD Genes on the PRAD Network", size = 20, face = "bold")) -> prad.plot
 
 ggsave("~/tcga_biolinks1/Plots/prad.plot.png", plot = prad.plot, width = 18, height = 10)

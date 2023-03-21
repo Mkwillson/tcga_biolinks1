@@ -1,101 +1,66 @@
-#### ARRANGE GG PLOTS INTO FIGURE ##################################
-# Create gg plots
-#### 0.5% ######################################################################
-readRDS(file = "~/tcga_biolinks1/stats/out.luad0.5") -> out.luad0.5
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph0.5") -> out.rand.luad.graph0.5
 
-out.luad0.5[which(is.infinite(out.luad0.5))] <- NA
+## Read back into R
+# library(igraph)
+# read.graph("~/tcga_biolinks1/GRAPHML/luad4.final.graphml", format = "graphml") -> luad.graph
+# saveRDS(luad.graph, file = "~/tcga_biolinks1/RDS/luad.graph")
 
-# Create a random cutoff
-quantile(colMeans(out.rand.luad.graph0.5, na.rm = T),0.01) -> random.cutoff0.5.luad
+luad.graph <- readRDS(file = "~/tcga_biolinks1/RDS/luad.graph")
 
-dat.luad0.5 <- data.frame(Distance = c(colMeans(out.luad0.5), colMeans(out.rand.luad.graph0.5, na.rm = T)),
-                          Distribution = factor(c(rep("Real",nrow(out.luad0.5)),rep("Random",nrow(out.rand.luad.graph0.5)))))
+# Read table into R
+read.csv(file = "~/tcga_biolinks1/GRAPHML/luad4.node.csv") -> luad.graph.df
+luad.graph.df$Percent.of.Patients.with.a.Missense.Mutation
 
-# Perform KS test on column means
-ks.test(colMeans(out.luad0.5), colMeans(out.rand.luad.graph0.5, na.rm = T)) -> ks.result0.5.luad
+##### 1.5% PATIENTS ##############################################################
 
-# Print
-ks.result0.5.luad$statistic
-ks.result0.5.luad$p.value
-# length(ks.result2.luad$data$x)
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 1.5) -> luad.graph.df.filt1.5
 
+unique(luad.graph.df.filt1.5$name) -> unique.genes.luad1.5
 
-# Create a text annotation of results
-paste0("D = ",round(ks.result0.5.luad$statistic,2), ifelse(ks.result0.5.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.luad$p.value,2)))) -> text.annot
-paste0("D = ",round(ks.result0.5.luad$statistic,2)) -> text.annot1
-paste0(ifelse(ks.result0.5.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.luad$p.value,4)))) -> text.annot2
-length(ks.result0.5.luad$data$x) -> text.annot3
+# Install packages
+library(foreach)
+library(doParallel)
 
-dim(out.luad0.5)
-dim(out.rand.luad.graph0.5)
+# Run in parallel
+registerDoParallel(cores = 30)
 
-# Create gg plot
-ggplot(dat.luad0.5, aes(x=Distance, colour=Distribution)) +
-  geom_density() +
-  geom_vline(data=dat.luad0.5, aes(xintercept=random.cutoff0.5.luad,  colour=Distribution),
-             linetype="dashed", linewidth=1) +
-  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
-  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
-  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
-  labs(x = "Mean Distance") +
-  labs(y = "Empirical Density") +
-  theme_minimal() +
-  ggtitle(NULL) -> gg.luad0.5
+# Calculate distances between all genes
+#i = 1
+out.luad1.5 <- foreach(i=1:length(unique.genes.luad1.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad2), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad1.5,])}
 
-gg.luad0.5
+colnames(out.luad1.5) <- unique.genes.luad1.5
 
-#### 1% ########################################################################
+# Calculate distances between random genes of same length as filtered genes
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad1") -> out.luad1
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph1") -> out.rand.luad.graph1
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad1.5)) -> all.genes.rand.luad1.5
 
-# Turn inifnite into NAs
-out.luad1[which(is.infinite(out.luad1))] <- NA
+out.rand.luad.graph1.5 <- foreach(i=1:length(all.genes.rand.luad1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad1.5,])}
 
-# Create a random cutoff
-quantile(colMeans(out.rand.luad.graph1, na.rm = T),0.01) -> random.cutoff1.luad
-
-dat.luad1 <- data.frame(Distance = c(colMeans(out.luad1), colMeans(out.rand.luad.graph1, na.rm = T)),
-                        Distribution = factor(c(rep("Real",nrow(out.luad1)),rep("Random",nrow(out.rand.luad.graph1)))))
-
-# Perform KS test on column means
-ks.test(colMeans(out.luad1), colMeans(out.rand.luad.graph1, na.rm = T)) -> ks.result1.luad
-
-# Print
-ks.result1.luad$statistic
-ks.result1.luad$p.value
-# length(ks.result2.luad$data$x)
+# # Save results of distances
+saveRDS(out.rand.luad.graph1.5, file = "~/tcga_biolinks1/stats/out.rand.luad.graph1.5")
+saveRDS(out.luad1.5, file = "~/tcga_biolinks1/stats/out.luad1.5")
 
 
-# Create a text annotation of results
-paste0("D = ",round(ks.result1.luad$statistic,2), ifelse(ks.result1.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.luad$p.value,2)))) -> text.annot
-paste0("D = ",round(ks.result1.luad$statistic,2)) -> text.annot1
-paste0(ifelse(ks.result1.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.luad$p.value,4)))) -> text.annot2
-length(ks.result1.luad$data$x) -> text.annot3
+# out.rand.luad.graph2 <- readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph2")
+# out.luad2 <- readRDS( file = "~/tcga_biolinks1/stats/out.luad2")
 
-dim(out.luad1)
-dim(out.rand.luad.graph1)
-
-# Create gg plot
-ggplot(dat.luad1, aes(x=Distance, colour=Distribution)) +
-  geom_density() +
-  geom_vline(data=dat.luad1, aes(xintercept=random.cutoff1.luad,  colour=Distribution),
-             linetype="dashed", linewidth=1) +
-  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
-  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
-  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
-  labs(x = "Mean Distance") +
-  labs(y = "Empirical Density") +
-  theme_minimal() +
-  ggtitle(NULL) -> gg.luad1
-
-gg.luad1
-
-#### 1.5% ######################################################################
-
-readRDS(file = "~/tcga_biolinks1/stats/out.luad1.5") -> out.luad1.5
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph1.5") -> out.rand.luad.graph1.5
+# Create histogram of column means
+# hist(colMeans(out.luad2))
+# hist(colMeans(out.rand.luad.graph2))
 
 # Turn inifnite into NAs
 out.luad1.5[which(is.infinite(out.luad1.5))] <- NA
@@ -135,14 +100,251 @@ ggplot(dat.luad1.5, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad1.5
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad1.5
 
 gg.luad1.5
+ggsave("./gg.luad1.5.png", plot = gg.luad1.5, width = 10, height = 10)
 
-#### PROB DAMAGING #############################################################
+#### 1% PATIENTS #############################################################################
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad.prob") -> out.luad.prob
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.prob") -> out.rand.luad.graph.prob
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 1) -> luad.graph.df.filt1
+
+unique(luad.graph.df.filt1$name) -> unique.genes.luad1
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad1 <- foreach(i=1:length(unique.genes.luad1), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad1), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad1[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad1,])}
+
+colnames(out.luad1) <- unique.genes.luad1
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad1)) -> all.genes.rand.luad1
+
+out.rand.luad.graph1 <- foreach(i=1:length(all.genes.rand.luad1), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad1[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad1,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph1, file = "~/tcga_biolinks1/stats/out.rand.luad.graph1")
+saveRDS(out.luad1, file = "~/tcga_biolinks1/stats/out.luad1")
+
+
+# out.rand.luad.graph2 <- readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph2")
+# out.luad2 <- readRDS( file = "~/tcga_biolinks1/stats/out.luad2")
+
+# Create histogram of column means
+# hist(colMeans(out.luad2))
+# hist(colMeans(out.rand.luad.graph2))
+
+# Turn inifnite into NAs
+out.luad1[which(is.infinite(out.luad1))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.luad.graph1, na.rm = T),0.01) -> random.cutoff1.luad
+
+dat.luad1 <- data.frame(Distance = c(colMeans(out.luad1), colMeans(out.rand.luad.graph1, na.rm = T)),
+                        Distribution = factor(c(rep("Real",nrow(out.luad1)),rep("Random",nrow(out.rand.luad.graph1)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.luad1), colMeans(out.rand.luad.graph1, na.rm = T)) -> ks.result1.luad
+
+# Print
+ks.result1.luad$statistic
+ks.result1.luad$p.value
+# length(ks.result2.luad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result1.luad$statistic,2), ifelse(ks.result1.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.luad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result1.luad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result1.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.luad$p.value,4)))) -> text.annot2
+length(ks.result1.luad$data$x) -> text.annot3
+
+dim(out.luad1)
+dim(out.rand.luad.graph1)
+
+# Create gg plot
+ggplot(dat.luad1, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.luad1, aes(xintercept=random.cutoff1.luad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad1
+
+gg.luad1
+ggsave("./gg.luad1.png", plot = gg.luad1, width = 10, height = 10)
+
+###### 0.5% PATIENTS #######################################################################
+
+
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 0.5) -> luad.graph.df.filt0.5
+
+unique(luad.graph.df.filt0.5$name) -> unique.genes.luad0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad0.5 <- foreach(i=1:length(unique.genes.luad0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad2), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad0.5,])}
+
+colnames(out.luad0.5) <- unique.genes.luad0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad0.5)) -> all.genes.rand.luad0.5
+
+out.rand.luad.graph0.5 <- foreach(i=1:length(all.genes.rand.luad0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph0.5, file = "~/tcga_biolinks1/stats/out.rand.luad.graph0.5")
+saveRDS(out.luad0.5, file = "~/tcga_biolinks1/stats/out.luad0.5")
+
+
+# out.rand.luad.graph2 <- readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph2")
+# out.luad2 <- readRDS( file = "~/tcga_biolinks1/stats/out.luad2")
+
+# Create histogram of column means
+# hist(colMeans(out.luad2))
+# hist(colMeans(out.rand.luad.graph2))
+
+# Turn inifnite into NAs
+out.luad0.5[which(is.infinite(out.luad0.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.luad.graph0.5, na.rm = T),0.01) -> random.cutoff0.5.luad
+
+dat.luad0.5 <- data.frame(Distance = c(colMeans(out.luad0.5), colMeans(out.rand.luad.graph0.5, na.rm = T)),
+                          Distribution = factor(c(rep("Real",nrow(out.luad0.5)),rep("Random",nrow(out.rand.luad.graph0.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.luad0.5), colMeans(out.rand.luad.graph0.5, na.rm = T)) -> ks.result0.5.luad
+
+# Print
+ks.result0.5.luad$statistic
+ks.result0.5.luad$p.value
+# length(ks.result2.luad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result0.5.luad$statistic,2), ifelse(ks.result0.5.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.luad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result0.5.luad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result0.5.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.luad$p.value,4)))) -> text.annot2
+length(ks.result0.5.luad$data$x) -> text.annot3
+
+dim(out.luad0.5)
+dim(out.rand.luad.graph0.5)
+
+# Create gg plot
+ggplot(dat.luad0.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.luad0.5, aes(xintercept=random.cutoff0.5.luad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad0.5
+
+gg.luad0.5
+ggsave("./gg.luad0.5.png", plot = gg.luad0.5, width = 10, height = 10)
+
+##### PROBABLY DAMAGING >0.908 ##############################
+
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(PolyPhen.Mean >0.908) -> luad.graph.df.filt.prob
+
+unique(luad.graph.df.filt.prob$name) -> unique.genes.luad.prob
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.prob <- foreach(i=1:length(unique.genes.luad.prob), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.prob), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.prob[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.prob,])}
+
+colnames(out.luad.prob) <- unique.genes.luad.prob
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.prob)) -> all.genes.rand.luad.prob
+
+out.rand.luad.graph.prob <- foreach(i=1:length(all.genes.rand.luad.prob), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.prob[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.prob,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.prob, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.prob")
+saveRDS(out.luad.prob, file = "~/tcga_biolinks1/stats/out.luad.prob")
+
+# Create histogram of column means
+# hist(colMeans(out.luad.prob))
+# hist(colMeans(out.rand.luad.graph.prob))
+
+# Turn inifnite into NAs
 out.luad.prob[which(is.infinite(out.luad.prob))] <- NA
 
 # Create a random cutoff
@@ -180,14 +382,61 @@ ggplot(dat.luad.prob, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad.prob
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.prob
 
 gg.luad.prob
-#### POSS DAMAGING #############################################################
+ggsave("./gg.luad.prob.png", plot = gg.luad.prob, width = 10, height = 10)
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad.poss") -> out.luad.poss
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.poss") -> out.rand.luad.graph.poss
+##### POSSIBLY DAMAGING =<0.908 >0.466 ##############################
+luad.graph.df$PolyPhen.Mean
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(PolyPhen.Mean <=0.908) %>%
+  filter(PolyPhen.Mean >0.466)-> luad.graph.df.filt.poss
 
+unique(luad.graph.df.filt.poss$name) -> unique.genes.luad.poss
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.poss <- foreach(i=1:length(unique.genes.luad.poss), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.poss), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.poss[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.poss,])}
+
+colnames(out.luad.poss) <- unique.genes.luad.poss
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.poss)) -> all.genes.rand.luad.poss
+
+out.rand.luad.graph.poss <- foreach(i=1:length(all.genes.rand.luad.poss), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.poss[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.poss,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.poss, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.poss")
+saveRDS(out.luad.poss, file = "~/tcga_biolinks1/stats/out.luad.poss")
+
+# Create histogram of column means
+# hist(colMeans(out.luad.poss))
+# hist(colMeans(out.rand.luad.graph.poss))
+
+# Turn inifnite into NAs
 out.luad.poss[which(is.infinite(out.luad.poss))] <- NA
 
 # Create a random cutoff
@@ -225,15 +474,61 @@ ggplot(dat.luad.poss, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad.poss
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.poss
 
 gg.luad.poss
+ggsave("./gg.luad.poss.png", plot = gg.luad.poss, width = 10, height = 10)
 
-#### ALL DAMAGING ##############################################################
+##### ALL DAMAGING >0.466 ##########################################################################
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad.dam") -> out.luad.dam
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam") -> out.rand.luad.graph.dam
+luad.graph.df$PolyPhen.Mean
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(PolyPhen.Mean >0.466)-> luad.graph.df.filt.dam
 
+unique(luad.graph.df.filt.dam$name) -> unique.genes.luad.dam
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.dam <- foreach(i=1:length(unique.genes.luad.dam), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.dam), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.dam[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.dam,])}
+
+colnames(out.luad.dam) <- unique.genes.luad.dam
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.dam)) -> all.genes.rand.luad.dam
+
+out.rand.luad.graph.dam <- foreach(i=1:length(all.genes.rand.luad.dam), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.dam[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.dam,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.dam, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam")
+saveRDS(out.luad.dam, file = "~/tcga_biolinks1/stats/out.luad.dam")
+
+# Create histogram of column means
+# hist(colMeans(out.luad.dam))
+# hist(colMeans(out.rand.luad.graph.dam))
+
+# Turn inifnite into NAs
 out.luad.dam[which(is.infinite(out.luad.dam))] <- NA
 
 # Create a random cutoff
@@ -271,15 +566,63 @@ ggplot(dat.luad.dam, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad.dam
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.dam
 
 gg.luad.dam
+ggsave("./gg.luad.dam.png", plot = gg.luad.dam, width = 10, height = 10)
 
-##### ALL DAMAGING AND >=0.5% ##################################################
+##### ALL DAMAGING >0.466 and %>0.5 ##########################################################################
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad.dam.0.5") -> out.luad.dam.0.5
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam.0.5") -> out.rand.luad.graph.dam.0.5
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 0.5) %>%
+  filter(PolyPhen.Mean >0.466)-> luad.graph.df.filt.dam.0.5
 
+unique(luad.graph.df.filt.dam.0.5$name) -> unique.genes.luad.dam.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.dam.0.5 <- foreach(i=1:length(unique.genes.luad.dam.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.dam.0.5,])}
+
+colnames(out.luad.dam.0.5) <- unique.genes.luad.dam.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.dam.0.5)) -> all.genes.rand.luad.dam.0.5
+
+out.rand.luad.graph.dam.0.5 <- foreach(i=1:length(all.genes.rand.luad.dam.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.dam.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.dam.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.dam.0.5, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam.0.5")
+saveRDS(out.luad.dam.0.5, file = "~/tcga_biolinks1/stats/out.luad.dam.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.luad.dam.0.5") -> out.luad.dam.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam.0.5") -> out.rand.luad.graph.dam.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.luad.dam.0.5))
+# hist(colMeans(out.rand.luad.graph.dam.0.5))
+
+# Turn inifnite into NAs
 out.luad.dam.0.5[which(is.infinite(out.luad.dam.0.5))] <- NA
 
 # Create a random cutoff
@@ -317,15 +660,156 @@ ggplot(dat.luad.dam.0.5, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad.dam.0.5
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.dam.0.5
 
 gg.luad.dam.0.5
+ggsave("~/tcga_biolinks1/Plots/gg.luad.dam.0.5.png", plot = gg.luad.dam.0.5, width = 10, height = 10)
 
-##### SIFT DELETERIOUS #########################################################
+##### ALL DAMAGING >0.466 and %>1.5 ##########################################################################
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad.del") -> out.luad.del
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.del") -> out.rand.luad.graph.del
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 1.5) %>%
+  filter(PolyPhen.Mean >0.466)-> luad.graph.df.filt.dam.1.5
 
+unique(luad.graph.df.filt.dam.1.5$name) -> unique.genes.luad.dam.1.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.dam.1.5 <- foreach(i=1:length(unique.genes.luad.dam.1.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.dam.1.5,])}
+
+colnames(out.luad.dam.1.5) <- unique.genes.luad.dam.1.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.dam.1.5)) -> all.genes.rand.luad.dam.1.5
+
+out.rand.luad.graph.dam.1.5 <- foreach(i=1:length(all.genes.rand.luad.dam.1.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.dam.1.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.dam.1.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.dam.1.5, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam.1.5")
+saveRDS(out.luad.dam.1.5, file = "~/tcga_biolinks1/stats/out.luad.dam.1.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.luad.dam.1.5") -> out.luad.dam.1.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.dam.1.5") -> out.rand.luad.graph.dam.1.5
+
+# Create histogram of column means
+# hist(colMeans(out.luad.dam.1.5))
+# hist(colMeans(out.rand.luad.graph.dam.1.5))
+
+# Turn inifnite into NAs
+out.luad.dam.1.5[which(is.infinite(out.luad.dam.1.5))] <- NA
+
+# Create a random cutoff
+quantile(colMeans(out.rand.luad.graph.dam.1.5, na.rm = T),0.01) -> random.cutoff.dam.1.5.luad
+
+dat.luad.dam.1.5 <- data.frame(Distance = c(colMeans(out.luad.dam.1.5), colMeans(out.rand.luad.graph.dam.1.5, na.rm = T)),
+                               Distribution = factor(c(rep("Real",nrow(out.luad.dam.1.5)),rep("Random",nrow(out.rand.luad.graph.dam.1.5)))))
+
+# Perform KS test on column means
+ks.test(colMeans(out.luad.dam.1.5), colMeans(out.rand.luad.graph.dam.1.5, na.rm = T)) -> ks.result.dam.1.5.luad
+
+# Print
+ks.result.dam.1.5.luad$statistic
+ks.result.dam.1.5.luad$p.value
+# length(ks.result2.luad$data$x)
+
+
+# Create a text annotation of results
+paste0("D = ",round(ks.result.dam.1.5.luad$statistic,2), ifelse(ks.result.dam.1.5.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.luad$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.1.5.luad$statistic,2)) -> text.annot1
+paste0(ifelse(ks.result.dam.1.5.luad$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.1.5.luad$p.value,4)))) -> text.annot2
+length(ks.result.dam.1.5.luad$data$x) -> text.annot3
+
+dim(out.luad.dam.1.5)
+dim(out.rand.luad.graph.dam.1.5)
+
+# Create gg plot
+ggplot(dat.luad.dam.1.5, aes(x=Distance, colour=Distribution)) +
+  geom_density() +
+  geom_vline(data=dat.luad.dam.1.5, aes(xintercept=random.cutoff.dam.1.5.luad,  colour=Distribution),
+             linetype="dashed", linewidth=1) +
+  annotate("text", x = 4.45, y = 1.75, label = text.annot) +
+  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
+  labs(x = "Mean Distance") +
+  labs(y = "Empirical Density") +
+  theme_minimal() +
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.dam.1.5
+
+gg.luad.dam.1.5
+ggsave("~/tcga_biolinks1/Plots/gg.luad.dam.1.5.png", plot = gg.luad.dam.1.5, width = 10, height = 10)
+
+######
+
+#### DELETERIOUS <0.05 ##########################################################################
+
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(SIFT.Mean <0.05)-> luad.graph.df.filt.del
+
+unique(luad.graph.df.filt.del$name) -> unique.genes.luad.del
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.del <- foreach(i=1:length(unique.genes.luad.del), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.del,])}
+
+colnames(out.luad.del) <- unique.genes.luad.del
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.del)) -> all.genes.rand.luad.del
+
+out.rand.luad.graph.del <- foreach(i=1:length(all.genes.rand.luad.del), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.del[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.del,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.del, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.del")
+saveRDS(out.luad.del, file = "~/tcga_biolinks1/stats/out.luad.del")
+
+# Create histogram of column means
+# hist(colMeans(out.luad.del))
+# hist(colMeans(out.rand.luad.graph.del))
+
+# Turn inifnite into NAs
 out.luad.del[which(is.infinite(out.luad.del))] <- NA
 
 # Create a random cutoff
@@ -363,14 +847,63 @@ ggplot(dat.luad.del, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad.del
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.del
 
 gg.luad.del
-##### SIFT DELETERIOUS AND >= 0.5% ##############################################
+ggsave("./gg.luad.del.png", plot = gg.luad.del, width = 10, height = 10)
 
-readRDS(file = "~/tcga_biolinks1/stats/out.luad.del.0.5") -> out.luad.del.0.5
-readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.del.0.5") -> out.rand.luad.graph.del.0.5
+##### ALL DELETERIOUS <0.05 and %>0.5 ##########################################################################
 
+luad.graph.df %>%
+  filter(Number.of.Missense.Mutations >=1) %>%
+  filter(Percent.of.Patients.With.a.Missense.Mutation >= 0.5) %>%
+  filter(SIFT.Mean <0.05)-> luad.graph.df.filt.del.0.5
+
+unique(luad.graph.df.filt.del.0.5$name) -> unique.genes.luad.del.0.5
+
+# Install packages
+library(foreach)
+library(doParallel)
+
+# Run in parallel
+registerDoParallel(cores = 30)
+
+# Calculate distances between all genes
+#i = 1
+out.luad.del.0.5 <- foreach(i=1:length(unique.genes.luad.del.0.5), .combine = cbind)%dopar%{
+  # out <- foreach(i=1:length(unique.genes.luad.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = unique.genes.luad.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[unique.genes.luad.del.0.5,])}
+
+colnames(out.luad.del.0.5) <- unique.genes.luad.del.0.5
+
+# Calculate distances between random genes of same length as filtered genes
+
+sample(attr(V(luad.graph),"name"), length(unique.genes.luad.del.0.5)) -> all.genes.rand.luad.del.0.5
+
+out.rand.luad.graph.del.0.5 <- foreach(i=1:length(all.genes.rand.luad.del.0.5), .combine = cbind)%dopar%{
+  temp.distance.table <- as.data.frame(distances(
+    luad.graph,
+    to = all.genes.rand.luad.del.0.5[i],
+    mode = c("all")
+  ))
+  return(temp.distance.table[all.genes.rand.luad.del.0.5,])}
+
+# # Save results of distances
+saveRDS(out.rand.luad.graph.del.0.5, file = "~/tcga_biolinks1/stats/out.rand.luad.graph.del.0.5")
+saveRDS(out.luad.del.0.5, file = "~/tcga_biolinks1/stats/out.luad.del.0.5")
+# readRDS(file = "~/tcga_biolinks1/stats/out.luad.del.0.5") -> out.luad.del.0.5
+# readRDS(file = "~/tcga_biolinks1/stats/out.rand.luad.graph.del.0.5") -> out.rand.luad.graph.del.0.5
+
+# Create histogram of column means
+# hist(colMeans(out.luad.del.0.5))
+# hist(colMeans(out.rand.luad.graph.del.0.5))
+
+# Turn inifnite into NAs
 out.luad.del.0.5[which(is.infinite(out.luad.del.0.5))] <- NA
 
 # Create a random cutoff
@@ -408,38 +941,20 @@ ggplot(dat.luad.del.0.5, aes(x=Distance, colour=Distribution)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
   theme_minimal() +
-  ggtitle(NULL) -> gg.luad.del.0.5
+  ggtitle("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network") -> gg.luad.del.0.5
 
 gg.luad.del.0.5
-##### GGARRANGE ################################################################
-library(ggpubr)
-gg.luad0.5 + labs(subtitle = "Only Genes Missense Mutated in >= 0.5% of All Patients") -> gg.luad0.5t
-gg.luad0.5t + theme(text = element_text(size = 10)) -> p1
-gg.luad1 + labs(subtitle = "Only Genes Missense Mutated in >= 1% of All Patients") -> gg.luad1t
-gg.luad1t + theme(text = element_text(size = 10)) -> p2
-gg.luad1.5 + labs(subtitle = "Only Genes Missense Mutated in >= 1.5% of All Patients") -> gg.luad1.5t
-gg.luad1.5t + theme(text = element_text(size = 10)) -> p3
-gg.luad.prob + labs(subtitle = "Only Genes with Probably Damaging Missense Mutations") -> gg.luad.probt
-gg.luad.probt + theme(text = element_text(size = 10)) ->p4
-gg.luad.poss + labs(subtitle = "Only Genes with Possibly Damaging Missense Mutations") -> gg.luad.posst
-gg.luad.posst + theme(text = element_text(size = 10)) -> p5
-gg.luad.dam + labs(subtitle = "Only Genes with Either Probably or Possibly Damaging Missense Mutations") -> gg.luad.damt
-gg.luad.damt + theme(text = element_text(size = 10)) -> p6
-gg.luad.dam.0.5 + labs(subtitle = "Only Genes with Either Probably or Possibly Damaging Missense Mutations,
-in >=0.5% of All Patients") -> gg.luad.dam.0.5t
-gg.luad.dam.0.5t + theme(text = element_text(size = 10)) -> p7
-gg.luad.del + labs(subtitle = "Only Genes with Deleterious Missense Mutations") -> gg.luad.delt
-gg.luad.delt + theme(text = element_text(size = 10)) -> p8
-gg.luad.del.0.5 + labs(subtitle = "Only Genes with Deleterious Missense Mutations, in >0.5% of All Patients") -> gg.luad.del.0.5t
-gg.luad.del.0.5t + theme(text = element_text(size = 10)) -> p9
+ggsave("~/tcga_biolinks1/Plots/gg.luad.del.0.5.png", plot = gg.luad.del.0.5, width = 10, height = 10)
 
-luad.figure <- ggarrange(p1, p2, p3, 
-                         p4, p5, p6,
-                         p7, p8, p9,
-                         labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I"),
-                         common.legend = TRUE, legend = "bottom",
-                         ncol = 3, nrow = 3)
-annotate_figure(luad.figure, top = text_grob("Mean Gene Distance Distributions of Both Random and LUAD Genes on the LUAD Network", size = 20, face = "bold")) -> luad.plot
+#######################################
 
-ggsave("~/tcga_biolinks1/Plots/luad.plot.png", plot = luad.plot, width = 18, height = 10)
+## Other method for saving
+# pdf(file = "./test.pdf")
+# gg.luad2
+# dev.off()
+# png(file = "./test.png")
+# gg.luad2
+# dev.off()
+#### close all the connections
+# graphics.off()
 

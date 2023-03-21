@@ -22,7 +22,7 @@ ks.result0.5.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result0.5.brca$statistic,2), ifelse(ks.result0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result0.5.brca$statistic,2), ifelse(ks.result0.5.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result0.5.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result0.5.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result0.5.brca$p.value,4)))) -> text.annot2
 length(ks.result0.5.brca$data$x) -> text.annot3
@@ -69,7 +69,7 @@ ks.result1.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result1.brca$statistic,2), ifelse(ks.result1.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result1.brca$statistic,2), ifelse(ks.result1.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result1.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result1.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result1.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.brca$p.value,4)))) -> text.annot2
 length(ks.result1.brca$data$x) -> text.annot3
@@ -116,9 +116,10 @@ ks.result1.5.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result1.5.brca$statistic,2), ifelse(ks.result1.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.5.brca$p.value,2)))) -> text.annot
+
+paste0("D = ",round(ks.result1.5.brca$statistic,2), ifelse(ks.result1.5.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result1.5.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result1.5.brca$statistic,2)) -> text.annot1
-paste0(ifelse(ks.result1.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result1.5.brca$p.value,4)))) -> text.annot2
+paste0(ifelse(ks.result1.5.brca$p.value==0, " p < 0.0001", paste0(" p = ",round(ks.result1.5.brca$p.value,8)))) -> text.annot2
 length(ks.result1.5.brca$data$x) -> text.annot3
 
 dim(out.brca1.5)
@@ -130,7 +131,7 @@ ggplot(dat.brca1.5, aes(x=Distance, colour=Distribution)) +
   geom_vline(data=dat.brca1.5, aes(xintercept=random.cutoff1.5.brca,  colour=Distribution),
              linetype="dashed", linewidth=1) +
   annotate("text", x = 4.45, y = 1.75, label = text.annot) +
-  #annotate("text", x = 4.5, y = 1.65, label = text.annot2) +
+  # annotate("text", x = 4.45, y = 1.65, label = text.annot2) +
   annotate("text", x = 4.45, y = 1.55, label = paste0("N = ",text.annot3)) +
   labs(x = "Mean Distance") +
   labs(y = "Empirical Density") +
@@ -161,7 +162,7 @@ ks.result.prob.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.prob.brca$statistic,2), ifelse(ks.result.prob.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.prob.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.prob.brca$statistic,2), ifelse(ks.result.prob.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.prob.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.prob.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.prob.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.prob.brca$p.value,4)))) -> text.annot2
 length(ks.result.prob.brca$data$x) -> text.annot3
@@ -183,6 +184,7 @@ ggplot(dat.brca.prob, aes(x=Distance, colour=Distribution)) +
   ggtitle(NULL) -> gg.brca.prob
 
 gg.brca.prob
+
 #### POSS DAMAGING #############################################################
 
 readRDS(file = "~/tcga_biolinks1/stats/out.brca.poss") -> out.brca.poss
@@ -206,7 +208,7 @@ ks.result.poss.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.poss.brca$statistic,2), ifelse(ks.result.poss.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.poss.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.poss.brca$statistic,2), ifelse(ks.result.poss.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.poss.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.poss.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.poss.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.poss.brca$p.value,4)))) -> text.annot2
 length(ks.result.poss.brca$data$x) -> text.annot3
@@ -252,7 +254,7 @@ ks.result.dam.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.dam.brca$statistic,2), ifelse(ks.result.dam.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.brca$statistic,2), ifelse(ks.result.dam.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.dam.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.dam.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.dam.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.brca$p.value,4)))) -> text.annot2
 length(ks.result.dam.brca$data$x) -> text.annot3
@@ -298,7 +300,7 @@ ks.result.dam.0.5.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.dam.0.5.brca$statistic,2), ifelse(ks.result.dam.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.dam.0.5.brca$statistic,2), ifelse(ks.result.dam.0.5.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.dam.0.5.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.dam.0.5.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.dam.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.dam.0.5.brca$p.value,4)))) -> text.annot2
 length(ks.result.dam.0.5.brca$data$x) -> text.annot3
@@ -344,7 +346,7 @@ ks.result.del.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.del.brca$statistic,2), ifelse(ks.result.del.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.brca$statistic,2), ifelse(ks.result.del.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.del.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.del.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.del.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.brca$p.value,4)))) -> text.annot2
 length(ks.result.del.brca$data$x) -> text.annot3
@@ -389,7 +391,7 @@ ks.result.del.0.5.brca$p.value
 
 
 # Create a text annotation of results
-paste0("D = ",round(ks.result.del.0.5.brca$statistic,2), ifelse(ks.result.del.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.brca$p.value,2)))) -> text.annot
+paste0("D = ",round(ks.result.del.0.5.brca$statistic,2), ifelse(ks.result.del.0.5.brca$p.value <0.0001, " p < 0.0001", paste0(" p = ",signif(ks.result.del.0.5.brca$p.value,2)))) -> text.annot
 paste0("D = ",round(ks.result.del.0.5.brca$statistic,2)) -> text.annot1
 paste0(ifelse(ks.result.del.0.5.brca$p.value==0, " p < 0.0001", paste0("p = ",round(ks.result.del.0.5.brca$p.value,4)))) -> text.annot2
 length(ks.result.del.0.5.brca$data$x) -> text.annot3
@@ -430,7 +432,7 @@ in >=0.5% of All Patients") -> gg.brca.dam.0.5t
 gg.brca.dam.0.5t + theme(text = element_text(size = 10)) -> p7
 gg.brca.del + labs(subtitle = "Only Genes with Deleterious Missense Mutations") -> gg.brca.delt
 gg.brca.delt + theme(text = element_text(size = 10)) -> p8
-gg.brca.del.0.5 + labs(subtitle = "Only Genes with Deleterious Missense Mutations, in >0.5% of All Patients") -> gg.brca.del.0.5t
+gg.brca.del.0.5 + labs(subtitle = "Only Genes with Deleterious Missense Mutations, in >= 0.5% of All Patients") -> gg.brca.del.0.5t
 gg.brca.del.0.5t + theme(text = element_text(size = 10)) -> p9
 
 brca.figure <- ggarrange(p1, p2, p3, 
@@ -439,6 +441,9 @@ brca.figure <- ggarrange(p1, p2, p3,
                          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I"),
                          common.legend = TRUE, legend = "bottom",
                          ncol = 3, nrow = 3)
+
+
 annotate_figure(brca.figure, top = text_grob("Mean Gene Distance Distributions of Both Random and BRCA Genes on the BRCA Network", size = 20, face = "bold")) -> brca.plot
 
 ggsave("~/tcga_biolinks1/Plots/brca.plot.png", plot = brca.plot, width = 18, height = 10)
+

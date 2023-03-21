@@ -1,7 +1,7 @@
 # Creating a singular function for data extraction of:
 # Transcriptomic/expression data
 # Clinical data
-# Mutational data
+# Mutational data 
 
 real.pull.data <- function(
     project = "",
@@ -60,17 +60,18 @@ real.pull.data <- function(
 brca.data <- real.pull.data(project = "TCGA-BRCA",
                            save.filename = "BRCA.Exp.rda"
 )
+
+# Print
 brca.data$expression
 brca.data$clinical
 brca.data$mutational
-
-
-names(colData(brca.data$expression))
 
 # Extracting TCGA-PRAD data
 prad.data <- real.pull.data(project = "TCGA-PRAD",
                             save.filename = "PRAD.Exp.rda"
 )
+
+# Print
 prad.data$expression
 prad.data$clinical
 prad.data$mutational
@@ -79,14 +80,18 @@ prad.data$mutational
 luad.data <- real.pull.data(project = "TCGA-LUAD",
                               save.filename = "LUAD.Exp.rda"
 )
+
+# Print
 luad.data$expression
 luad.data$clinical
 luad.data$mutational
 
-# Extracting TCGA-KIRK data
+# Extracting TCGA-KIRC data
 kirc.data <- real.pull.data(project = "TCGA-KIRC",
                               save.filename = "KIRC.Exp.rda"
 )
+
+# Print
 kirc.data$expression
 kirc.data$clinical
 kirc.data$mutational
@@ -95,29 +100,18 @@ kirc.data$mutational
 stad.data <- real.pull.data(project = "TCGA-STAD",
                             save.filename = "STAD.Exp.rda"
 )
+
+# Print
 stad.data$expression
 stad.data$clinical
 stad.data$mutational
 
-# Extracting TARGET-ALL-P2 data
-all.data <- real.pull.data(project = "TARGET-ALL-P2",
-                            save.filename = "all.Exp.rda"
-)
-#### DOESNT WORK AS ONLY TCGA DATA CAN BE USED IN TCGA BIOLINKS ####
-
-datatable(brca.data$clinical[1:20,],
-          filter = 'top',
-          options = list(scrollX = TRUE, keys = TRUE, pageLength = 5), 
-          rownames = FALSE)
-
-# Extracting TCGA-KIRK data
+# Extracting TCGA-KIRP data
 kirp.data <- real.pull.data(project = "TCGA-KIRP",
                             save.filename = "KIRP.Exp.rda"
 )
+
+# Print
 kirp.data$expression
 kirp.data$clinical
 kirp.data$mutational
-
-
-#################
-

@@ -25,8 +25,8 @@ gp.style.filter <- function (x,fold.change, delta, prop, base, prop.base, na.rm 
 }
 
 
-#### BRCA ####
-# Filter at various levels until a subset of sufficient size is created (6000-1300 approx)
+#### BRCA ###############################################################################################################
+# Trial and error method of filtering at various levels until a subset of sufficient size is created (6000-1300 approx)
 # Select data to filter
 brca.data$expression
 assay(brca.data$expression, "tpm_unstrand") -> exp.df.tpm.brca

@@ -98,7 +98,7 @@ head(brca.filt.exp4.first.col[1:20,1:20])
 write.table(brca.filt.exp4.first.col, file = "./brca.filt.exp4.txt", sep = "\t", quote = F, row.names = F)
 write.table(brca.filt.exp4.first.col[,1], file = "./brca.filt.exp4.tfs.txt", sep = "\t", quote = F, row.names = F, col.names = F)
  
-#### Filter attempt 5 - fold.change 5, delta 25, base 3 ####
+#### Filter attempt 5 - fold.change 4, delta 20, base 3 ####
 brca.filt.exp5 <- exp.df.tpm.brca[apply(exp.df.tpm.brca,1,gp.style.filter,fold.change=4, delta=20, prop=0.05, base=3, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
 dim(brca.filt.exp5)
 
@@ -109,6 +109,7 @@ head(brca.filt.exp5.first.col[1:20,1:20])
 # Save expression data and TF data as txt files
 write.table(brca.filt.exp5.first.col, file = "./brca.filt.exp5.txt", sep = "\t", quote = F, row.names = F)
 write.table(brca.filt.exp5.first.col[,1], file = "./brca.filt.exp5.tfs.txt", sep = "\t", quote = F, row.names = F, col.names = F)
+
 
 #### PRAD ###################################################################################################################
 # Select data to filter

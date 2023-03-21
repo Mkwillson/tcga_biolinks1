@@ -99,7 +99,7 @@ write.table(brca.filt.exp4.first.col, file = "./brca.filt.exp4.txt", sep = "\t",
 write.table(brca.filt.exp4.first.col[,1], file = "./brca.filt.exp4.tfs.txt", sep = "\t", quote = F, row.names = F, col.names = F)
  
 #### Filter attempt 5 - fold.change 5, delta 25, base 3 ####
-brca.filt.exp5 <- exp.df.tpm.brca[apply(exp.df.tpm.brca,1,gp.style.filter,fold.change=5, delta=25, prop=0.05, base=3, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
+brca.filt.exp5 <- exp.df.tpm.brca[apply(exp.df.tpm.brca,1,gp.style.filter,fold.change=4, delta=20, prop=0.05, base=3, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
 dim(brca.filt.exp5)
 
 # Take just the names of genes to act as TFs to test against
@@ -183,7 +183,7 @@ write.table(prad.filt.exp4.first.col, file = "./prad.filt.exp4.txt", sep = "\t",
 write.table(prad.filt.exp4.first.col[,1], file = "./prad.filt.exp4.tfs.txt", sep = "\t", quote = F, row.names = F, col.names = F)
 
 #### Filter attempt 5 - fold.change 4, delta 10, base 3 ####
-prad.filt.exp5 <- exp.df.tpm.prad[apply(exp.df.tpm.prad,1,gp.style.filter,fold.change=4, delta=10, prop=0.05, base=3, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
+prad.filt.exp5 <- exp.df.tpm.prad[apply(exp.df.tpm.prad,1,gp.style.filter,fold.change=4, delta=20, prop=0.05, base=3, prop.base=0.05, na.rm = TRUE, neg.rm = TRUE),]
 dim(prad.filt.exp5)
 # 504, 554
 

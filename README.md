@@ -19,7 +19,7 @@ Step 5 - All.mutation.data script:
 - Select 4 categories (High, Moderate, Low and Modifier Impact)
 - Select missense mutations
 - Create flags (0 or 1) for the SIFT and PolyPhen categories
-- Calculate mean, median, maximum and standard deviations for each mutation Mean and PolyPhen scores in each genes
+- Calculate SIFT and PolyPhen mean, median, maximum and standard deviations for each gene
 - Create data frame
 - Must remove % and NAs to be able to annotate into Cytoscape and use continuous mapping.
 

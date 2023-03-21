@@ -3,7 +3,7 @@ CMB3000 Research Project Code
 
 Step 1 - real.pull.data script:
 - This contains a singular function for the extraction of mutation, expression and clinical data.
-- Data pulled for 6 cancaer types
+- Data pulled for 6 cancer types
 
 Step 2 - Real.filter script:
 - Contains a function for filtering of expression data
